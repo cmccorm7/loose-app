@@ -1,0 +1,27 @@
+# Files to ignore in git repository
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+.venv/
+venv/
+ENV/
+
+# Buildozer files (will be recreated)
+.buildozer/
+bin/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
