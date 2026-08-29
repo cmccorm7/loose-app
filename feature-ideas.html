@@ -10,6 +10,7 @@
   --hex-yellow: #F5C518;
   --hex-purple: #7B2D8B;
   --hex-dark: #1B1B19;
+  --hex-shadow: rgba(27, 27, 25, 0.10);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +23,7 @@
     --hex-yellow: #F5C518;
     --hex-purple: #A050C0;
     --hex-dark: #E5E5E0;
+    --hex-shadow: rgba(0, 0, 0, 0.25);
   }
 }
 
@@ -34,6 +36,7 @@
   --hex-yellow: #F5C518;
   --hex-purple: #A050C0;
   --hex-dark: #E5E5E0;
+  --hex-shadow: rgba(0, 0, 0, 0.25);
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -125,9 +128,10 @@ section {
 
 .feature svg {
   display: block;
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 18px;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  filter: drop-shadow(0 3px 5px var(--hex-shadow));
 }
 
 .principle {
@@ -195,77 +199,163 @@ footer {
     <div class="catalog">
 
       <div class="feature">
-        <svg viewBox="0 0 64 64">
-          <path d="M32 8L53 20V44L32 56L11 44V20Z" fill="var(--hex-purple)"/>
-          <line x1="32" y1="22" x2="32" y2="42" stroke="var(--hex-yellow)" stroke-width="3" stroke-linecap="round"/>
-          <line x1="22" y1="32" x2="42" y2="32" stroke="var(--hex-yellow)" stroke-width="3" stroke-linecap="round"/>
+        <svg viewBox="0 0 96 96">
+          <defs>
+            <filter id="g1" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path d="M48 12L80 30V66L48 84L16 66V30Z" fill="var(--hex-purple)"/>
+          <path d="M48 12L80 30V46H16V30Z" fill="white" opacity="0.08"/>
+          <g filter="url(#g1)">
+            <line x1="48" y1="30" x2="48" y2="66" stroke="var(--hex-yellow)" stroke-width="5" stroke-linecap="round"/>
+            <line x1="30" y1="48" x2="66" y2="48" stroke="var(--hex-yellow)" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="48" cy="48" r="5.5" fill="var(--hex-purple)"/>
+            <circle cx="48" cy="48" r="2.5" fill="var(--hex-yellow)"/>
+          </g>
         </svg>
         <div class="feature-name">Maker Space</div>
         <div class="feature-desc">A shared creative workspace where community members build, create, and collaborate.</div>
       </div>
 
       <div class="feature">
-        <svg viewBox="0 0 64 64">
-          <path d="M32 8L53 20V44L32 56L11 44V20Z" fill="var(--hex-yellow)"/>
-          <path d="M32 22C38 26 40 34 32 42C24 34 26 26 32 22Z" fill="var(--hex-dark)" opacity="0.6"/>
+        <svg viewBox="0 0 96 96">
+          <defs>
+            <filter id="g2" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path d="M48 12L80 30V66L48 84L16 66V30Z" fill="var(--hex-yellow)"/>
+          <path d="M48 12L80 30V46H16V30Z" fill="white" opacity="0.08"/>
+          <g filter="url(#g2)">
+            <path d="M48 22C60 30 62 46 48 68C34 46 36 30 48 22Z" fill="var(--hex-dark)" opacity="0.5"/>
+            <path d="M48 30C56 37 57 48 48 62" fill="none" stroke="var(--hex-yellow)" stroke-width="1.8" stroke-linecap="round" opacity="0.5"/>
+          </g>
         </svg>
         <div class="feature-name">Cafe</div>
         <div class="feature-desc">Focused on making healthy eating affordable and realistic. Local sourcing, glass containers, no microplastics. Built around the reality that eight-hour workdays and long commutes make eating well nearly impossible.</div>
       </div>
 
       <div class="feature">
-        <svg viewBox="0 0 64 64">
-          <path d="M32 9L41 14V24L32 29L23 24V14Z" fill="var(--hex-yellow)"/>
-          <path d="M22 27L31 32V42L22 47L13 42V32Z" fill="var(--hex-purple)"/>
-          <path d="M42 27L51 32V42L42 47L33 42V32Z" fill="var(--hex-dark)"/>
+        <svg viewBox="0 0 96 96">
+          <defs>
+            <filter id="g3" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g filter="url(#g3)">
+            <path d="M48 10L62 18V34L48 42L34 34V18Z" fill="var(--hex-yellow)"/>
+            <path d="M48 10L62 18V26H34V18Z" fill="white" opacity="0.08"/>
+            <path d="M34 38L48 46V62L34 70L20 62V46Z" fill="var(--hex-purple)"/>
+            <path d="M34 38L48 46V52H20V46Z" fill="white" opacity="0.06"/>
+            <path d="M62 38L76 46V62L62 70L48 62V46Z" fill="var(--hex-dark)" opacity="0.85"/>
+            <path d="M62 38L76 46V52H48V46Z" fill="white" opacity="0.05"/>
+          </g>
         </svg>
         <div class="feature-name">Sub-Communities</div>
         <div class="feature-desc">In-person interest groups — physical Reddit. People form their own groups around whatever they're into: local history, card games, niche hobbies. A direct answer to the fact that a nine-to-five life plus geography makes it hard to find your people.</div>
       </div>
 
       <div class="feature">
-        <svg viewBox="0 0 64 64">
-          <path d="M32 8L53 20V44L32 56L11 44V20Z" fill="var(--hex-dark)"/>
-          <path d="M32 22L40 32L32 42L24 32Z" fill="var(--hex-yellow)"/>
+        <svg viewBox="0 0 96 96">
+          <defs>
+            <filter id="g4" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path d="M48 12L80 30V66L48 84L16 66V30Z" fill="var(--hex-dark)"/>
+          <path d="M48 12L80 30V46H16V30Z" fill="white" opacity="0.06"/>
+          <g filter="url(#g4)">
+            <rect x="38" y="38" width="20" height="20" rx="2" fill="var(--hex-yellow)" opacity="0.35" transform="rotate(45 48 48)"/>
+            <path d="M48 30L60 48L48 66L36 48Z" fill="var(--hex-yellow)"/>
+          </g>
         </svg>
         <div class="feature-name">Community Art</div>
         <div class="feature-desc">Local art — from students, from anyone — gets amplified. Printed on shirts, displayed on mugs, put on walls. Honors the act of someone consciously making something authentic.</div>
       </div>
 
       <div class="feature">
-        <svg viewBox="0 0 64 64">
-          <path d="M32 8L53 20V44L32 56L11 44V20Z" fill="var(--hex-yellow)"/>
-          <polyline points="22 38 32 24 42 38" fill="none" stroke="var(--hex-dark)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+        <svg viewBox="0 0 96 96">
+          <defs>
+            <filter id="g5" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path d="M48 12L80 30V66L48 84L16 66V30Z" fill="var(--hex-yellow)"/>
+          <path d="M48 12L80 30V46H16V30Z" fill="white" opacity="0.08"/>
+          <g filter="url(#g5)">
+            <polyline points="30 58 48 46 66 58" fill="none" stroke="var(--hex-dark)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.25"/>
+            <polyline points="30 48 48 36 66 48" fill="none" stroke="var(--hex-dark)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+            <polyline points="30 38 48 26 66 38" fill="none" stroke="var(--hex-dark)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.65"/>
+          </g>
         </svg>
         <div class="feature-name">Talent Incubator</div>
         <div class="feature-desc">People join the Loose workforce and operate in their natural strengths, not a fixed job description. An intake conversation matches what someone is actually good at to something Loose genuinely needs done. Their work becomes a living portfolio. Employers who interact with Loose see these people in action — and Loose willingly lets them get hired away. Surfacing someone's real value is part of the mission.</div>
       </div>
 
       <div class="feature">
-        <svg viewBox="0 0 64 64">
-          <path d="M32 8L53 20V44L32 56L11 44V20Z" fill="var(--hex-purple)"/>
-          <circle cx="32" cy="32" r="9" fill="none" stroke="var(--hex-yellow)" stroke-width="3"/>
+        <svg viewBox="0 0 96 96">
+          <defs>
+            <filter id="g6" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path d="M48 12L80 30V66L48 84L16 66V30Z" fill="var(--hex-purple)"/>
+          <path d="M48 12L80 30V46H16V30Z" fill="white" opacity="0.08"/>
+          <g filter="url(#g6)">
+            <path d="M48 28L64 37V59L48 68L32 59V37Z" fill="none" stroke="var(--hex-yellow)" stroke-width="2.5" stroke-linejoin="round" opacity="0.6"/>
+            <circle cx="48" cy="48" r="10" fill="var(--hex-yellow)" opacity="0.85"/>
+          </g>
         </svg>
         <div class="feature-name">Membership</div>
         <div class="feature-desc">The revenue model. Ideally most of the community joins. The benefit is direct and visible: real improvement in your neighborhood.</div>
       </div>
 
       <div class="feature">
-        <svg viewBox="0 0 64 64">
-          <path d="M32 8L53 20V44L32 56L11 44V20Z" fill="var(--hex-yellow)"/>
-          <line x1="32" y1="22" x2="32" y2="28" stroke="var(--hex-dark)" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-          <line x1="32" y1="36" x2="32" y2="42" stroke="var(--hex-dark)" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-          <line x1="22" y1="32" x2="28" y2="32" stroke="var(--hex-dark)" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-          <line x1="36" y1="32" x2="42" y2="32" stroke="var(--hex-dark)" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+        <svg viewBox="0 0 96 96">
+          <defs>
+            <filter id="g7" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path d="M48 12L80 30V66L48 84L16 66V30Z" fill="var(--hex-yellow)"/>
+          <path d="M48 12L80 30V46H16V30Z" fill="white" opacity="0.08"/>
+          <g filter="url(#g7)">
+            <line x1="48" y1="28" x2="48" y2="38" stroke="var(--hex-dark)" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+            <line x1="48" y1="58" x2="48" y2="68" stroke="var(--hex-dark)" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+            <line x1="57" y1="43" x2="65" y2="38" stroke="var(--hex-dark)" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+            <line x1="39" y1="53" x2="31" y2="58" stroke="var(--hex-dark)" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+            <line x1="57" y1="53" x2="65" y2="58" stroke="var(--hex-dark)" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+            <line x1="39" y1="43" x2="31" y2="38" stroke="var(--hex-dark)" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+            <circle cx="48" cy="48" r="7" fill="var(--hex-dark)" opacity="0.55"/>
+          </g>
         </svg>
         <div class="feature-name">Events</div>
         <div class="feature-desc">Loose Parties, thrown purely for fun. Live music. The name markets itself.</div>
       </div>
 
       <div class="feature">
-        <svg viewBox="0 0 64 64">
-          <path d="M24 19L35 25.5V38.5L24 45L13 38.5V25.5Z" fill="var(--hex-purple)" opacity="0.85"/>
-          <path d="M40 19L51 25.5V38.5L40 45L29 38.5V25.5Z" fill="var(--hex-yellow)" opacity="0.85"/>
+        <svg viewBox="0 0 96 96">
+          <defs>
+            <filter id="g8" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g filter="url(#g8)">
+            <path d="M36 18L52 27V45L36 54L20 45V27Z" fill="var(--hex-purple)" opacity="0.85"/>
+            <path d="M36 18L52 27V36H20V27Z" fill="white" opacity="0.06"/>
+            <path d="M60 42L76 51V69L60 78L44 69V51Z" fill="var(--hex-yellow)" opacity="0.85"/>
+            <path d="M60 42L76 51V56H44V51Z" fill="white" opacity="0.06"/>
+            <circle cx="48" cy="48" r="4.5" fill="var(--hex-dark)" opacity="0.5"/>
+          </g>
         </svg>
         <div class="feature-name">Hyper-Local Social Platform</div>
         <div class="feature-desc">A digital platform scoped to the immediate Loose community, built around user wellbeing instead of engagement metrics. The draw is that it's your neighborhood's platform. Members get exclusive content.</div>
