@@ -1,0 +1,550 @@
+<title>Loose Feature Ideas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root {
+  --ink: #1A1520;
+  --ink-secondary: #8A7F92;
+  --surface: #FAF8F5;
+  --surface-card: #F0ECF4;
+  --accent: #C850C0;
+  --yellow: #F5C518;
+  --yellow-muted: #F5C51830;
+  --accent-muted: #C850C020;
+  --border: #D8D0E0;
+  --chip-explore: #C850C018;
+  --chip-explore-text: #9A3894;
+  --chip-next: #F5C51825;
+  --chip-next-text: #9E7D00;
+  --chip-dream: #4A90D918;
+  --chip-dream-text: #3070B0;
+  --category-ux: #E8604C;
+  --category-social: #50B8A0;
+  --category-creative: #D070E8;
+  --category-tech: #5888E0;
+  --category-fun: #F5C518;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #EDE8F2;
+    --ink-secondary: #9890A4;
+    --surface: #131018;
+    --surface-card: #1E1A28;
+    --accent: #D870D0;
+    --yellow: #F5C518;
+    --yellow-muted: #F5C51825;
+    --accent-muted: #D870D015;
+    --border: #302840;
+    --chip-explore: #D870D020;
+    --chip-explore-text: #E090DA;
+    --chip-next: #F5C51820;
+    --chip-next-text: #E0B820;
+    --chip-dream: #5898E820;
+    --chip-dream-text: #70A8F0;
+    --category-ux: #F07060;
+    --category-social: #60D0B8;
+    --category-creative: #E088F0;
+    --category-tech: #70A0F0;
+    --category-fun: #F5C518;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ink: #EDE8F2;
+  --ink-secondary: #9890A4;
+  --surface: #131018;
+  --surface-card: #1E1A28;
+  --accent: #D870D0;
+  --yellow: #F5C518;
+  --yellow-muted: #F5C51825;
+  --accent-muted: #D870D015;
+  --border: #302840;
+  --chip-explore: #D870D020;
+  --chip-explore-text: #E090DA;
+  --chip-next: #F5C51820;
+  --chip-next-text: #E0B820;
+  --chip-dream: #5898E820;
+  --chip-dream-text: #70A8F0;
+  --category-ux: #F07060;
+  --category-social: #60D0B8;
+  --category-creative: #E088F0;
+  --category-tech: #70A0F0;
+  --category-fun: #F5C518;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ---- Hero ---- */
+.hero {
+  position: relative;
+  padding: 56px 0 40px;
+  display: flex;
+  align-items: flex-end;
+  gap: 40px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.hero-text { flex: 1; min-width: 0; position: relative; z-index: 1; }
+
+.hero-wordmark {
+  font-family: 'Syne', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.hero-wordmark span {
+  color: var(--accent);
+}
+
+.hero-sub {
+  font-family: 'Syne', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-secondary);
+  margin-top: 10px;
+}
+
+.hero-description {
+  color: var(--ink-secondary);
+  font-size: 0.95rem;
+  max-width: 48ch;
+  margin-top: 12px;
+  line-height: 1.55;
+}
+
+.hero-canvas-wrap {
+  flex-shrink: 0;
+  width: 200px;
+  height: 160px;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 640px) {
+  .hero { flex-direction: column; align-items: flex-start; gap: 24px; padding: 40px 0 32px; }
+  .hero-canvas-wrap { width: 140px; height: 110px; order: -1; }
+}
+
+/* ---- Columns ---- */
+.board { margin-top: 40px; }
+
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  margin-top: 48px;
+}
+
+.column-header:first-child { margin-top: 0; }
+
+.column-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.column-title {
+  font-family: 'Syne', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.column-count {
+  font-size: 0.8rem;
+  color: var(--ink-secondary);
+  font-weight: 500;
+}
+
+/* ---- Card grid ---- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 400px) {
+  .card-grid { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 22px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 12px var(--accent-muted);
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.chip {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+.chip-category {
+  color: var(--surface);
+  border-radius: 3px;
+}
+
+.card-title {
+  font-family: 'Syne', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.02rem;
+  line-height: 1.3;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.card-desc {
+  font-size: 0.875rem;
+  color: var(--ink-secondary);
+  line-height: 1.55;
+}
+
+.card-votes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--ink-secondary);
+  font-weight: 500;
+}
+
+.vote-hex {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ---- Footer ---- */
+.footer {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.footer-left {
+  font-family: 'Syne', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+}
+
+.footer-right {
+  font-size: 0.78rem;
+  color: var(--ink-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: none; }
+}
+</style>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="hero-text">
+    <h1 class="hero-wordmark">Feature <span>Ideas</span></h1>
+    <p class="hero-sub">Loose &mdash; Product Roadmap</p>
+    <p class="hero-description">Where we track what's coming next for the Loose hexagon animation app. Ideas move from exploration through development as they take shape.</p>
+  </div>
+  <div class="hero-canvas-wrap">
+    <canvas id="heroCanvas"></canvas>
+  </div>
+</header>
+
+<!-- Board -->
+<main class="board">
+
+  <!-- Exploring -->
+  <div class="column-header">
+    <div class="column-dot" style="background: var(--accent);"></div>
+    <span class="column-title">Exploring</span>
+    <span class="column-count">4 ideas</span>
+  </div>
+  <div class="card-grid">
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-creative);">Creative</span>
+      </div>
+      <div class="card-title">Custom Color Palettes</div>
+      <div class="card-desc">Let users build their own hexagon color schemes beyond the default yellow, purple, and black. Includes a live preview swatch that animates as you pick.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        12 votes
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-ux);">UX</span>
+      </div>
+      <div class="card-title">Gesture Controls</div>
+      <div class="card-desc">Swipe to steer the animation direction. Pinch to resize hexagons on the fly. Long-press to freeze a single hexagon while others keep moving.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        9 votes
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-fun);">Fun</span>
+      </div>
+      <div class="card-title">Sound Design</div>
+      <div class="card-desc">Audio feedback during each animation phase — a rising tone while hexagons gather, a rattle during the shake, and a satisfying scatter sound on the fall.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        7 votes
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-tech);">Tech</span>
+      </div>
+      <div class="card-title">Physics Playground</div>
+      <div class="card-desc">Expose gravity, bounce, and friction as sliders. Watch how different physics parameters change the way hexagons fall and scatter.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        6 votes
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Next Up -->
+  <div class="column-header">
+    <div class="column-dot" style="background: var(--yellow);"></div>
+    <span class="column-title">Next Up</span>
+    <span class="column-count">3 ideas</span>
+  </div>
+  <div class="card-grid">
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-social);">Social</span>
+      </div>
+      <div class="card-title">Share as GIF</div>
+      <div class="card-desc">Record a loop of the current animation and export it as a shareable GIF or short video. One tap to capture, one tap to send.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        18 votes
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-creative);">Creative</span>
+      </div>
+      <div class="card-title">Formation Patterns</div>
+      <div class="card-desc">New gathering shapes beyond the circle: spiral, honeycomb grid, wave, and diamond formations. Each creates a different visual before the shake.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        15 votes
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-ux);">UX</span>
+      </div>
+      <div class="card-title">Home Screen Widget</div>
+      <div class="card-desc">A live Android widget that plays a miniature hexagon animation right on the home screen. Tap to launch the full app.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        14 votes
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Dream Big -->
+  <div class="column-header">
+    <div class="column-dot" style="background: var(--chip-dream-text);"></div>
+    <span class="column-title">Dream Big</span>
+    <span class="column-count">3 ideas</span>
+  </div>
+  <div class="card-grid">
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-tech);">Tech</span>
+      </div>
+      <div class="card-title">AR Hexagons</div>
+      <div class="card-desc">Use the device camera to project hexagon animations onto real surfaces. Watch them gather on your desk, shake, and scatter across the floor.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        22 votes
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-social);">Social</span>
+      </div>
+      <div class="card-title">Multiplayer Sync</div>
+      <div class="card-desc">Connect two devices over the network so their hexagon animations play in sync. One person's hexagons scatter onto the other person's screen.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        19 votes
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-tags">
+        <span class="chip chip-category" style="background: var(--category-creative);">Creative</span>
+        <span class="chip chip-category" style="background: var(--category-fun);">Fun</span>
+      </div>
+      <div class="card-title">Theme Packs</div>
+      <div class="card-desc">Downloadable visual themes that change colors, shapes, and animation behavior all at once. Neon, ocean, retro arcade, and more — each with its own personality.</div>
+      <div class="card-votes">
+        <svg class="vote-hex" viewBox="0 0 20 20"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="var(--yellow)" opacity="0.7"/></svg>
+        16 votes
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-left">Loose</div>
+  <div class="footer-right">Feature ideas &middot; Updated August 2026</div>
+</footer>
+
+<script>
+(function() {
+  const canvas = document.getElementById('heroCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const isDark = () =>
+    document.documentElement.dataset.theme === 'dark' ||
+    (document.documentElement.dataset.theme !== 'light' &&
+     window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  const hexes = [];
+  const colors = ['#F5C518', '#C850C0', '#1A1520'];
+  const colorsDark = ['#F5C518', '#D870D0', '#EDE8F2'];
+
+  for (let i = 0; i < 7; i++) {
+    hexes.push({
+      x: Math.random() * 200,
+      y: Math.random() * 160,
+      size: 12 + Math.random() * 16,
+      color: i % 3,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.3,
+      rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 0.008
+    });
+  }
+
+  function drawHex(x, y, size, rotation, fillColor) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i + rotation;
+      const px = x + size * Math.cos(angle);
+      const py = y + size * Math.sin(angle);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = fillColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  const motionOk = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function frame() {
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+    const dark = isDark();
+    const pal = dark ? colorsDark : colors;
+
+    for (const hex of hexes) {
+      if (motionOk) {
+        hex.x += hex.vx;
+        hex.y += hex.vy;
+        hex.rot += hex.rotV;
+        if (hex.x < -hex.size) hex.x = w + hex.size;
+        if (hex.x > w + hex.size) hex.x = -hex.size;
+        if (hex.y < -hex.size) hex.y = h + hex.size;
+        if (hex.y > h + hex.size) hex.y = -hex.size;
+      }
+      drawHex(hex.x, hex.y, hex.size, hex.rot, pal[hex.color]);
+    }
+
+    if (motionOk) requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
