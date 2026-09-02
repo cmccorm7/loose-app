@@ -23,5 +23,11 @@ Thumbs.db
 *.swp
 *.swo
 
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+*.tar.gz
+
 # Logs
 *.log

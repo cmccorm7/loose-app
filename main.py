@@ -1,3 +1,13 @@
+import os
+os.environ.setdefault("KIVY_LOG_LEVEL", "warning")
+
+from kivy.config import Config
+Config.set("graphics", "width", "520")
+Config.set("graphics", "height", "820")
+Config.set("graphics", "resizable", "1")
+Config.set("graphics", "minimum_width", "420")
+Config.set("graphics", "minimum_height", "600")
+
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.label import Label
@@ -225,7 +235,10 @@ class PredictorScreenWrapper(FootballPredictorScreen):
 
 
 class LooseApp(App):
+    title = "College Football Predictor"
+
     def build(self):
+        self.icon = ""
         sm = ScreenManager()
         sm.add_widget(PredictorScreenWrapper(name="predictor"))
         sm.add_widget(HexagonScreen(name="hexagon"))
