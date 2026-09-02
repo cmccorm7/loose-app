@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = Hexagon Intro Animation
+title = College Football Predictor
 
 # (str) Package name
-package.name = hexagonintro
+package.name = cfbpredictor
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.example
