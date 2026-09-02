@@ -1,0 +1,810 @@
+<title>CFB Predictor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap">
+<style>
+:root {
+  --bg: #0a1628;
+  --bg-surface: #111d32;
+  --bg-card: #162340;
+  --border: #1e3054;
+  --text: #f0ede6;
+  --text-secondary: #8d99ae;
+  --text-muted: #5a6478;
+  --green: #2d6a4f;
+  --green-light: #52b788;
+  --red: #9b2226;
+  --red-light: #e5383b;
+  --gold: #d4a843;
+  --gold-dim: #a8842e;
+  --bar-a: #2d6a4f;
+  --bar-b: #9b2226;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f2ed;
+    --bg-surface: #ffffff;
+    --bg-card: #ffffff;
+    --border: #d6d2c9;
+    --text: #1a1a2e;
+    --text-secondary: #555e6e;
+    --text-muted: #8a8f9a;
+    --green: #2d6a4f;
+    --green-light: #1b4332;
+    --red: #9b2226;
+    --red-light: #7a1a1d;
+    --gold: #a8842e;
+    --gold-dim: #7a6020;
+    --bar-a: #40916c;
+    --bar-b: #c1292e;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a1628;
+  --bg-surface: #111d32;
+  --bg-card: #162340;
+  --border: #1e3054;
+  --text: #f0ede6;
+  --text-secondary: #8d99ae;
+  --text-muted: #5a6478;
+  --green: #2d6a4f;
+  --green-light: #52b788;
+  --red: #9b2226;
+  --red-light: #e5383b;
+  --gold: #d4a843;
+  --gold-dim: #a8842e;
+  --bar-a: #2d6a4f;
+  --bar-b: #9b2226;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+.app { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; }
+
+/* ── Header ── */
+.header {
+  text-align: center;
+  padding: 24px 0 20px;
+  border-bottom: 2px solid var(--gold-dim);
+  margin-bottom: 20px;
+}
+.header h1 {
+  font-family: 'Oswald', 'Impact', sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  line-height: 1.1;
+}
+.header p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Selection panel ── */
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.matchup-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.team-pick label {
+  display: block;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.team-pick select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238d99ae'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.team-pick select:focus {
+  outline: 2px solid var(--gold-dim);
+  outline-offset: 1px;
+}
+.vs-badge {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  padding-bottom: 8px;
+  text-align: center;
+}
+.options-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  align-items: end;
+}
+.option-group { flex: 1; }
+.option-group label {
+  display: block;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.option-group select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238d99ae'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.option-group select:focus {
+  outline: 2px solid var(--gold-dim);
+  outline-offset: 1px;
+}
+.predict-btn {
+  padding: 10px 24px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.15s;
+  align-self: end;
+}
+.predict-btn:hover { background: var(--green-light); }
+.predict-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ── Scoreboard result ── */
+.scoreboard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.scoreboard[hidden] { display: none !important; }
+.sb-header {
+  background: var(--bg-card);
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.sb-label {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+.sb-confidence {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.sb-teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  padding: 20px 16px;
+  align-items: center;
+  gap: 12px;
+}
+.sb-team {
+  text-align: center;
+}
+.sb-team-name {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: clamp(0.85rem, 3vw, 1.05rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.sb-team-conf {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.sb-team-score {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 8vw, 3.2rem);
+  line-height: 1;
+  margin-top: 6px;
+}
+.sb-team.winner .sb-team-name { color: var(--text); }
+.sb-team.winner .sb-team-score { color: var(--green-light); }
+.sb-team.loser .sb-team-score { color: var(--red-light); }
+.sb-dash {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 300;
+  font-size: 2rem;
+  color: var(--text-muted);
+}
+.sb-venue {
+  text-align: center;
+  padding: 0 16px 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ── Probability bar ── */
+.prob-bar-wrap {
+  padding: 0 16px 16px;
+}
+.prob-bar {
+  height: 26px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  position: relative;
+}
+.prob-bar-a, .prob-bar-b {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #fff;
+  letter-spacing: 0.04em;
+  transition: width 0.4s ease;
+  min-width: 40px;
+}
+.prob-bar-a { background: var(--bar-a); }
+.prob-bar-b { background: var(--bar-b); }
+
+/* ── Power ratings ── */
+.ratings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.rating-card {
+  text-align: center;
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+.rating-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.rating-value {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+.rating-card.a .rating-value { color: var(--green-light); }
+.rating-card.b .rating-value { color: var(--red-light); }
+
+/* ── Matchup edges ── */
+.edges {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.edges[hidden] { display: none !important; }
+.edges-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  background: var(--bg-card);
+}
+.edge-row {
+  display: grid;
+  grid-template-columns: 1fr 60px auto 60px;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+.edge-row:last-child { border-bottom: none; }
+.edge-cat {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.8rem;
+}
+.edge-val {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-weight: 600;
+}
+.edge-val.a { color: var(--green-light); }
+.edge-val.b { color: var(--red-light); }
+.edge-badge {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 3px;
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.edge-badge.adv-a { background: var(--green); color: #c8edd8; }
+.edge-badge.adv-b { background: var(--red); color: #f5c6c8; }
+.edge-badge.even { background: var(--border); color: var(--text-muted); }
+
+/* ── Algorithm note ── */
+.algo-note {
+  margin-top: 16px;
+  padding: 12px 14px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  border-left: 2px solid var(--border);
+}
+.algo-note[hidden] { display: none !important; }
+
+/* ── Placeholder ── */
+.placeholder {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.placeholder[hidden] { display: none !important; }
+.placeholder .icon {
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .matchup-row { grid-template-columns: 1fr; gap: 6px; }
+  .vs-badge { padding: 4px 0; }
+  .options-row { flex-direction: column; gap: 8px; }
+  .predict-btn { width: 100%; }
+  .edge-row { grid-template-columns: 1fr 50px auto 50px; font-size: 0.78rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prob-bar-a, .prob-bar-b { transition: none; }
+}
+</style>
+
+<div class="app">
+  <div class="header">
+    <h1>College Football Predictor</h1>
+    <p>131 FBS Teams &middot; Composite Power Ratings</p>
+  </div>
+
+  <div class="panel">
+    <div class="matchup-row">
+      <div class="team-pick">
+        <label for="teamA">Team A</label>
+        <select id="teamA"></select>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="team-pick">
+        <label for="teamB">Team B</label>
+        <select id="teamB"></select>
+      </div>
+    </div>
+    <div class="options-row">
+      <div class="option-group">
+        <label for="confFilter">Conference</label>
+        <select id="confFilter"><option value="All">All Conferences</option></select>
+      </div>
+      <div class="option-group">
+        <label for="venue">Venue</label>
+        <select id="venue">
+          <option value="neutral">Neutral Site</option>
+          <option value="a">Team A Home</option>
+          <option value="b">Team B Home</option>
+        </select>
+      </div>
+      <button class="predict-btn" id="predictBtn">Predict</button>
+    </div>
+  </div>
+
+  <div class="placeholder" id="placeholder">
+    <div class="icon">&#127944;</div>
+    Select two teams and hit Predict
+  </div>
+
+  <div class="scoreboard" id="scoreboard" hidden>
+    <div class="sb-header">
+      <span class="sb-label">Prediction</span>
+      <span class="sb-confidence" id="sbConf"></span>
+    </div>
+    <div class="sb-teams">
+      <div class="sb-team" id="sbTeamA">
+        <div class="sb-team-name" id="sbNameA"></div>
+        <div class="sb-team-conf" id="sbConfA"></div>
+        <div class="sb-team-score" id="sbScoreA"></div>
+      </div>
+      <div class="sb-dash">&ndash;</div>
+      <div class="sb-team" id="sbTeamB">
+        <div class="sb-team-name" id="sbNameB"></div>
+        <div class="sb-team-conf" id="sbConfB"></div>
+        <div class="sb-team-score" id="sbScoreB"></div>
+      </div>
+    </div>
+    <div class="sb-venue" id="sbVenue"></div>
+    <div class="prob-bar-wrap">
+      <div class="prob-bar">
+        <div class="prob-bar-a" id="probBarA"></div>
+        <div class="prob-bar-b" id="probBarB"></div>
+      </div>
+    </div>
+    <div class="ratings">
+      <div class="rating-card a">
+        <div class="rating-label" id="ratingLabelA"></div>
+        <div class="rating-value" id="ratingValA"></div>
+      </div>
+      <div class="rating-card b">
+        <div class="rating-label" id="ratingLabelB"></div>
+        <div class="rating-value" id="ratingValB"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="edges" id="edges" hidden>
+    <div class="edges-header">Matchup Breakdown</div>
+    <div id="edgeRows"></div>
+  </div>
+
+  <div class="algo-note" id="algoNote" hidden>
+    Composite power rating: Elo 25%, Offense 20%, Defense 20%, Efficiency 15%, Strength of Schedule 10%, Record 10%. Win probability via logistic function. Home field advantage &thickapprox; 3 points. Stats are representative baselines &mdash; update the source data for current-season accuracy.
+  </div>
+</div>
+
+<script>
+// ── Team Database ──────────────────────────────────────────────────
+// [conf, w, l, ppg, papg, ypp, yppDef, toMargin, 3rd%, rz%, sacks, penYPG, sos, elo]
+const R={
+"Georgia":["SEC",13,1,38.5,13.8,6.9,4.3,.9,.48,.93,3.2,48,.64,1685],
+"Texas":["SEC",12,2,36.2,15.4,6.7,4.5,.7,.46,.91,3,52,.63,1660],
+"Alabama":["SEC",11,2,37.8,17,6.8,4.8,.5,.45,.9,2.8,55,.62,1645],
+"Ole Miss":["SEC",11,2,39.2,18.5,7,5,.4,.47,.89,2.5,50,.6,1600],
+"Tennessee":["SEC",10,3,35,19.2,6.5,5,.3,.44,.88,2.7,54,.61,1575],
+"LSU":["SEC",10,3,36.5,20.8,6.6,5.2,.2,.43,.87,2.4,58,.61,1565],
+"Missouri":["SEC",10,3,30.2,17.5,6,4.7,.6,.42,.86,2.9,45,.58,1545],
+"Texas A&M":["SEC",9,4,29.8,20,5.8,5,.3,.41,.85,2.6,52,.59,1510],
+"Oklahoma":["SEC",8,5,28.5,22.5,5.7,5.2,.1,.4,.84,2.3,55,.6,1480],
+"South Carolina":["SEC",8,5,27,22,5.6,5.3,0,.39,.83,2.2,50,.57,1460],
+"Kentucky":["SEC",7,6,24.5,23,5.4,5.3,-.1,.38,.82,2.4,48,.56,1420],
+"Arkansas":["SEC",7,6,26.8,25.2,5.5,5.5,-.2,.38,.81,2.1,56,.57,1415],
+"Auburn":["SEC",6,7,24,25.5,5.3,5.5,-.3,.37,.8,2,54,.58,1390],
+"Florida":["SEC",6,7,25.5,26,5.4,5.6,-.2,.37,.81,2.1,52,.57,1385],
+"Mississippi State":["SEC",5,7,22,27.5,5.1,5.7,-.4,.35,.79,1.9,58,.56,1350],
+"Vanderbilt":["SEC",3,9,18.5,32,4.8,6,-.7,.33,.76,1.5,60,.55,1280],
+"Ohio State":["Big Ten",12,1,40.2,12.5,7.1,4.2,1,.5,.94,3.5,46,.62,1680],
+"Oregon":["Big Ten",13,1,37.5,14,6.8,4.4,.8,.48,.92,3.1,44,.6,1665],
+"Penn State":["Big Ten",11,2,34,15.8,6.5,4.5,.7,.46,.9,3.3,42,.6,1620],
+"Michigan":["Big Ten",10,3,28.5,14.2,5.8,4.3,.6,.42,.87,3.4,40,.59,1590],
+"USC":["Big Ten",10,3,35.8,22,6.7,5.3,.2,.45,.89,2.2,50,.58,1555],
+"Washington":["Big Ten",9,4,31,20.5,6.2,5,.3,.43,.86,2.5,48,.57,1520],
+"Iowa":["Big Ten",8,5,22,15,5.2,4.5,.5,.38,.82,3,38,.55,1490],
+"Wisconsin":["Big Ten",8,5,27.5,20,5.7,5,.2,.4,.84,2.6,44,.55,1480],
+"UCLA":["Big Ten",7,6,26,23.5,5.5,5.3,0,.39,.82,2.1,48,.55,1440],
+"Nebraska":["Big Ten",7,6,25.5,22,5.5,5.2,.1,.39,.83,2.3,52,.54,1435],
+"Minnesota":["Big Ten",7,6,24,21.5,5.4,5.2,.1,.38,.82,2.2,46,.54,1425],
+"Illinois":["Big Ten",7,6,25,22.5,5.5,5.3,0,.39,.83,2.4,50,.55,1430],
+"Indiana":["Big Ten",7,6,26.5,24,5.6,5.4,-.1,.39,.82,2,48,.54,1420],
+"Maryland":["Big Ten",6,7,25,26,5.5,5.5,-.2,.38,.81,2,50,.54,1395],
+"Rutgers":["Big Ten",6,7,22.5,24,5.2,5.4,-.1,.37,.8,2.3,48,.54,1385],
+"Michigan State":["Big Ten",5,7,22,27,5.1,5.6,-.4,.36,.79,1.9,54,.55,1365],
+"Northwestern":["Big Ten",4,8,19.5,27.5,4.9,5.7,-.3,.35,.78,2,44,.54,1340],
+"Purdue":["Big Ten",3,9,18,30,4.8,5.9,-.6,.33,.76,1.7,52,.54,1300],
+"Utah":["Big 12",10,3,30,17.5,6.1,4.7,.5,.43,.87,3,42,.54,1545],
+"Kansas State":["Big 12",10,3,32.5,19,6.3,5,.4,.44,.88,2.6,46,.53,1535],
+"Arizona":["Big 12",10,3,34,21,6.5,5.2,.3,.44,.87,2.3,50,.52,1530],
+"Colorado":["Big 12",9,4,32,22,6.3,5.3,.2,.43,.86,2.4,52,.52,1505],
+"Arizona State":["Big 12",9,4,31,21.5,6.2,5.2,.2,.42,.85,2.5,48,.52,1500],
+"Oklahoma State":["Big 12",8,5,30.5,23,6.1,5.3,.1,.41,.84,2.2,50,.52,1470],
+"Iowa State":["Big 12",8,5,27.5,20.5,5.7,5,.3,.4,.84,2.5,44,.52,1465],
+"UCF":["Big 12",8,5,33,25,6.4,5.5,0,.42,.85,2,52,.5,1455],
+"BYU":["Big 12",8,5,28,21,5.8,5.1,.2,.4,.83,2.4,42,.5,1455],
+"Kansas":["Big 12",8,5,28.5,22,5.8,5.2,.1,.4,.83,2.3,46,.51,1450],
+"TCU":["Big 12",7,6,29,24.5,5.9,5.4,-.1,.4,.83,2.1,50,.52,1430],
+"Texas Tech":["Big 12",7,6,32.5,28,6.3,5.7,-.2,.41,.84,1.8,54,.51,1420],
+"Cincinnati":["Big 12",7,6,26,23,5.5,5.3,0,.39,.82,2.3,46,.5,1415],
+"Baylor":["Big 12",6,7,25,25,5.4,5.4,-.2,.38,.81,2.1,50,.51,1390],
+"West Virginia":["Big 12",6,7,26.5,27,5.6,5.6,-.3,.38,.81,2,52,.51,1385],
+"Houston":["Big 12",5,7,24,28,5.3,5.7,-.4,.36,.79,1.8,56,.51,1355],
+"Florida State":["ACC",10,3,33.5,17,6.4,4.7,.6,.45,.89,2.9,48,.55,1575],
+"Clemson":["ACC",10,3,32,16.5,6.3,4.6,.5,.44,.88,3.1,44,.54,1565],
+"Miami":["ACC",10,3,35.5,20,6.6,5.1,.4,.45,.89,2.5,50,.53,1555],
+"Louisville":["ACC",10,3,34,21,6.5,5.2,.3,.44,.88,2.6,48,.53,1545],
+"SMU":["ACC",9,4,35,23,6.6,5.3,.2,.44,.87,2.3,46,.51,1510],
+"North Carolina":["ACC",8,5,30,23.5,6,5.3,.1,.41,.84,2.2,50,.52,1470],
+"Duke":["ACC",8,5,28,21,5.8,5.1,.3,.41,.84,2.4,44,.51,1465],
+"NC State":["ACC",7,6,26.5,23,5.6,5.3,0,.39,.82,2.3,48,.52,1430],
+"Pittsburgh":["ACC",7,6,28,24.5,5.8,5.4,-.1,.4,.83,2.5,50,.52,1435],
+"Georgia Tech":["ACC",7,6,29.5,25,5.9,5.5,-.1,.4,.83,2,52,.52,1425],
+"Virginia Tech":["ACC",7,6,27,24,5.6,5.3,0,.39,.82,2.4,46,.52,1420],
+"Syracuse":["ACC",7,6,27.5,24.5,5.7,5.4,-.1,.39,.82,2.2,50,.51,1415],
+"Cal":["ACC",6,7,24.5,25,5.4,5.4,-.2,.38,.81,2.1,48,.51,1395],
+"Boston College":["ACC",6,7,24,26,5.3,5.5,-.2,.37,.8,2,46,.51,1385],
+"Wake Forest":["ACC",5,7,24.5,28,5.4,5.7,-.3,.37,.8,1.9,52,.51,1360],
+"Virginia":["ACC",4,8,21,29,5.1,5.8,-.5,.35,.78,1.8,50,.51,1330],
+"Stanford":["ACC",3,9,18.5,31,4.8,6,-.6,.34,.77,1.6,44,.51,1295],
+"Notre Dame":["Ind",11,1,33,15.5,6.4,4.5,.7,.45,.89,3,42,.58,1630],
+"Tulane":["AAC",10,3,33,20,6.3,5.1,.4,.43,.87,2.5,48,.46,1505],
+"Memphis":["AAC",9,4,34.5,24,6.5,5.4,.2,.43,.86,2.2,50,.44,1475],
+"Army":["AAC",9,3,30.5,17,6,5,.5,.45,.86,2,38,.42,1480],
+"Navy":["AAC",8,4,28,20,5.8,5.2,.3,.42,.84,1.8,40,.42,1450],
+"South Florida":["AAC",7,6,27,25,5.6,5.5,-.1,.39,.82,2,52,.43,1400],
+"UTSA":["AAC",7,6,28.5,26,5.7,5.5,-.1,.39,.82,2,50,.42,1395],
+"North Texas":["AAC",7,6,30,27.5,5.9,5.6,-.2,.4,.83,1.9,52,.42,1390],
+"East Carolina":["AAC",6,6,26,26.5,5.5,5.6,-.2,.38,.81,2,50,.42,1375],
+"FAU":["AAC",6,7,25,27,5.4,5.6,-.3,.37,.8,1.9,54,.42,1365],
+"Charlotte":["AAC",5,7,23,28.5,5.2,5.7,-.4,.36,.79,1.7,52,.41,1340],
+"Tulsa":["AAC",4,8,21,30,5,5.9,-.5,.35,.78,1.6,54,.42,1310],
+"Rice":["AAC",5,7,22.5,27,5.2,5.6,-.3,.36,.79,1.8,48,.41,1335],
+"UAB":["AAC",5,7,23.5,28,5.3,5.7,-.3,.37,.8,1.9,50,.41,1345],
+"Temple":["AAC",3,9,17,33,4.6,6.1,-.7,.32,.75,1.4,56,.42,1260],
+"James Madison":["Sun Belt",9,3,32,19,6.3,5,.4,.43,.87,2.5,46,.42,1490],
+"Appalachian State":["Sun Belt",9,4,30,21.5,6,5.2,.3,.42,.85,2.3,44,.41,1460],
+"Louisiana":["Sun Belt",8,5,28.5,23,5.8,5.3,.1,.4,.83,2.1,48,.4,1430],
+"Marshall":["Sun Belt",7,6,26,24.5,5.5,5.4,0,.39,.82,2,50,.4,1400],
+"Troy":["Sun Belt",7,6,27.5,25,5.7,5.4,0,.39,.82,2.1,48,.4,1405],
+"Georgia Southern":["Sun Belt",7,6,28,26,5.7,5.5,-.1,.39,.82,1.9,50,.39,1395],
+"Coastal Carolina":["Sun Belt",7,6,29,26.5,5.8,5.5,-.1,.4,.83,2,52,.39,1400],
+"Texas State":["Sun Belt",7,6,29.5,27,5.9,5.6,-.2,.4,.83,1.9,54,.39,1395],
+"Old Dominion":["Sun Belt",5,7,23,28,5.2,5.7,-.4,.36,.79,1.7,52,.39,1345],
+"South Alabama":["Sun Belt",6,7,25,27,5.4,5.6,-.2,.37,.8,1.8,50,.39,1365],
+"Southern Miss":["Sun Belt",5,7,22,28.5,5.1,5.7,-.4,.35,.78,1.7,52,.39,1335],
+"Georgia State":["Sun Belt",5,7,24,29,5.3,5.8,-.4,.36,.79,1.6,54,.39,1340],
+"Louisiana Tech":["Sun Belt",5,7,24.5,28.5,5.3,5.7,-.3,.37,.8,1.8,50,.38,1350],
+"Arkansas State":["Sun Belt",4,8,21.5,30,5,5.9,-.5,.35,.78,1.5,54,.39,1310],
+"Boise State":["MWC",10,3,33,19.5,6.4,5,.5,.44,.88,2.6,44,.44,1530],
+"UNLV":["MWC",9,4,30.5,21,6.1,5.1,.3,.42,.85,2.3,48,.43,1485],
+"Fresno State":["MWC",8,5,28,22,5.8,5.2,.2,.41,.84,2.2,46,.43,1450],
+"Air Force":["MWC",8,5,27,19.5,5.6,5,.3,.42,.84,2,38,.42,1445],
+"San Diego State":["MWC",7,6,25.5,22.5,5.5,5.3,.1,.39,.82,2.2,44,.42,1420],
+"Wyoming":["MWC",7,6,24,21,5.3,5.2,.2,.39,.82,2.3,42,.41,1410],
+"Colorado State":["MWC",6,7,25,26,5.4,5.5,-.2,.38,.81,1.9,48,.41,1380],
+"San Jose State":["MWC",6,7,24.5,26.5,5.3,5.6,-.2,.37,.8,1.8,50,.41,1375],
+"Nevada":["MWC",5,7,23,28,5.2,5.7,-.4,.36,.79,1.7,52,.41,1345],
+"Utah State":["MWC",5,7,24.5,28.5,5.3,5.7,-.3,.37,.8,1.8,50,.4,1350],
+"New Mexico":["MWC",4,8,21,30.5,5,5.9,-.5,.35,.78,1.5,54,.4,1305],
+"Hawaii":["MWC",4,8,22.5,31,5.1,6,-.5,.35,.78,1.6,56,.39,1300],
+"Toledo":["MAC",9,4,30,21,6,5.2,.3,.42,.85,2.3,46,.38,1445],
+"Northern Illinois":["MAC",8,5,27.5,22.5,5.7,5.3,.2,.4,.83,2.1,48,.38,1420],
+"Miami (OH)":["MAC",8,5,26.5,22,5.6,5.2,.2,.4,.83,2.2,44,.37,1415],
+"Ohio":["MAC",7,6,26,24,5.5,5.4,0,.39,.82,2,48,.37,1395],
+"Western Michigan":["MAC",7,6,27,25.5,5.6,5.5,-.1,.39,.82,1.9,50,.37,1390],
+"Buffalo":["MAC",6,7,24.5,26,5.4,5.6,-.2,.37,.8,1.8,50,.37,1370],
+"Central Michigan":["MAC",5,7,23,27.5,5.2,5.6,-.3,.36,.79,1.7,52,.37,1345],
+"Eastern Michigan":["MAC",5,7,22.5,27,5.2,5.6,-.3,.36,.79,1.7,50,.37,1340],
+"Bowling Green":["MAC",5,7,23.5,28,5.3,5.7,-.3,.37,.8,1.8,52,.37,1350],
+"Ball State":["MAC",4,8,20.5,29.5,5,5.8,-.5,.34,.77,1.5,54,.37,1310],
+"Kent State":["MAC",2,10,15.5,35,4.5,6.3,-.8,.31,.74,1.2,58,.37,1230],
+"Akron":["MAC",3,9,17.5,33,4.7,6.1,-.7,.33,.76,1.4,56,.37,1255],
+"Liberty":["CUSA",10,3,32,19.5,6.3,5,.5,.43,.87,2.5,46,.4,1495],
+"Sam Houston":["CUSA",8,5,28,23.5,5.8,5.4,.1,.4,.83,2.1,48,.38,1420],
+"Jacksonville State":["CUSA",7,6,26,25,5.5,5.5,-.1,.38,.81,2,50,.37,1385],
+"Western Kentucky":["CUSA",7,6,28.5,27,5.8,5.6,-.1,.39,.82,1.9,52,.37,1390],
+"Middle Tennessee":["CUSA",6,7,25,28,5.4,5.7,-.3,.37,.8,1.8,50,.37,1365],
+"New Mexico State":["CUSA",5,7,23.5,29,5.3,5.8,-.4,.36,.79,1.6,54,.36,1340],
+"Kennesaw State":["CUSA",4,8,20,30.5,4.9,5.9,-.5,.34,.77,1.5,52,.36,1300],
+"FIU":["CUSA",3,9,18,33,4.7,6.1,-.7,.33,.76,1.3,56,.36,1265],
+"UTEP":["CUSA",4,8,19.5,30,4.9,5.9,-.5,.34,.77,1.5,54,.36,1295],
+"UConn":["Ind",6,7,24,26,5.3,5.5,-.2,.37,.8,2,50,.44,1370],
+"UMass":["Ind",3,9,17,34,4.6,6.2,-.8,.32,.75,1.3,58,.42,1245]
+};
+
+// ── Prediction Engine ──────────────────────────────────────────────
+const W={elo:.25,off:.20,def:.20,eff:.15,sos:.10,rec:.10};
+const HF=3;
+const SR={ppg:[10,50],papg:[10,45],ypp:[4,7.5],yppD:[4,7.5],to:[-2,2],td:[.25,.55],rz:[.7,.98],sk:[.5,4],pen:[30,90],sos:[.3,.7],elo:[1200,1700],wp:[0,1]};
+
+function norm(v,lo,hi,inv){
+  if(hi===lo)return 50;
+  let s=(v-lo)/(hi-lo)*100;
+  s=Math.max(0,Math.min(100,s));
+  return inv?100-s:s;
+}
+// Indices: 0=conf,1=w,2=l,3=ppg,4=papg,5=ypp,6=yppDef,7=toMargin,8=3rd%,9=rz%,10=sacks,11=penYPG,12=sos,13=elo
+function offScore(t){
+  return norm(t[3],...SR.ppg)*.4+norm(t[5],...SR.ypp)*.3+norm(t[8],...SR.td)*.15+norm(t[9],...SR.rz)*.15;
+}
+function defScore(t){
+  return norm(t[4],...SR.papg,true)*.45+norm(t[6],...SR.yppD,true)*.35+norm(t[10],...SR.sk)*.2;
+}
+function effScore(t){
+  return norm(t[7],...SR.to)*.6+norm(t[11],...SR.pen,true)*.4;
+}
+function powerRating(t){
+  const total=t[1]+t[2];
+  const wp=total>0?t[1]/total:0.5;
+  return W.elo*norm(t[13],...SR.elo)+W.off*offScore(t)+W.def*defScore(t)+W.eff*effScore(t)+W.sos*norm(t[12],...SR.sos)+W.rec*norm(wp,...SR.wp);
+}
+function predictScore(t,opp,home){
+  let b=(t[3]+opp[4])/2;
+  b+=t[7]*2;           // turnover margin adjustment
+  b+=(t[5]-opp[6])*3;  // ypp vs opponent ypp allowed
+  if(home)b+=HF/2;
+  return Math.max(3,Math.round(b));
+}
+function predict(nA,nB,venue){
+  const a=R[nA],b=R[nB];
+  let rA=powerRating(a),rB=powerRating(b);
+  const homeTeam=venue==='a'?nA:venue==='b'?nB:null;
+  let eA=rA+(homeTeam===nA?3:0),eB=rB+(homeTeam===nB?3:0);
+  const pA=1/(1+Math.exp(-(eA-eB)/10)),pB=1-pA;
+  const sA=predictScore(a,b,homeTeam===nA),sB=predictScore(b,a,homeTeam===nB);
+  const winner=pA>=pB?nA:nB,cv=Math.max(pA,pB);
+  const conf=cv>.85?"Very High":cv>.7?"High":cv>.6?"Moderate":"Toss-up";
+
+  const edges=[];
+  // 0=conf,1=w,2=l,3=ppg,4=papg,5=ypp,6=yppDef,7=toMargin,8=3rd%,9=rz%,10=sacks,11=penYPG,12=sos,13=elo
+  const comps=[
+    ["Offense (PPG)",a[3],b[3],false],
+    ["Defense (PPG Allowed)",a[4],b[4],true],
+    ["Off. Efficiency (YPP)",a[5],b[5],false],
+    ["Def. Efficiency (YPP)",a[6],b[6],true],
+    ["Turnover Margin",a[7],b[7],false],
+    ["3rd Down %",a[8]*100,b[8]*100,false],
+    ["Red Zone %",a[9]*100,b[9]*100,false],
+    ["Pass Rush (Sacks/G)",a[10],b[10],false],
+    ["Discipline (Pen YPG)",a[11],b[11],true],
+    ["Strength of Schedule",a[12],b[12],false],
+  ];
+
+  for(const[cat,vA,vB,lb] of comps){
+    const d=lb?(vB-vA):(vA-vB);
+    if(Math.abs(d)<.01){edges.push({cat,vA,vB,adv:"even",mag:"Even"});continue;}
+    const adv=d>0?"a":"b";
+    const pct=Math.abs(d)/Math.max(Math.abs(vA),Math.abs(vB),.01)*100;
+    const mag=pct<5?"Slight":pct<15?"Moderate":pct<30?"Significant":"Dominant";
+    edges.push({cat,vA,vB,adv,mag});
+  }
+
+  return {nA,nB,confA:a[0],confB:b[0],recA:`${a[1]}-${a[2]}`,recB:`${b[1]}-${b[2]}`,pA,pB,sA,sB,winner,conf,rA,rB,edges,homeTeam,venue};
+}
+
+// ── UI Wiring ──────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const teamNames=Object.keys(R).sort();
+const conferences=[...new Set(Object.values(R).map(t=>t[0]))].sort();
+
+function populateTeams(filter){
+  const list=filter==='All'?teamNames:teamNames.filter(n=>R[n][0]===filter);
+  for(const sel of [$('teamA'),$('teamB')]){
+    const prev=sel.value;
+    sel.innerHTML='';
+    list.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+    if(list.includes(prev))sel.value=prev;
+  }
+  // default different teams
+  if($('teamA').value===$('teamB').value&&list.length>1){
+    $('teamB').value=list[list.length>1?1:0];
+  }
+}
+
+conferences.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;$('confFilter').appendChild(o);});
+populateTeams('All');
+// Set interesting defaults
+$('teamA').value='Georgia';
+$('teamB').value='Ohio State';
+
+$('confFilter').addEventListener('change',()=>populateTeams($('confFilter').value));
+
+$('predictBtn').addEventListener('click',runPrediction);
+
+function runPrediction(){
+  const nA=$('teamA').value, nB=$('teamB').value;
+  if(nA===nB)return;
+  const venue=$('venue').value;
+  const r=predict(nA,nB,venue);
+
+  $('placeholder').hidden=true;
+  $('scoreboard').hidden=false;
+  $('edges').hidden=false;
+  $('algoNote').hidden=false;
+
+  $('sbConf').textContent=r.conf+' Confidence';
+  $('sbNameA').textContent=nA;
+  $('sbNameB').textContent=nB;
+  $('sbConfA').textContent=`${r.confA} · ${r.recA}`;
+  $('sbConfB').textContent=`${r.confB} · ${r.recB}`;
+  $('sbScoreA').textContent=r.sA;
+  $('sbScoreB').textContent=r.sB;
+
+  const tA=$('sbTeamA'),tB=$('sbTeamB');
+  tA.className='sb-team '+(r.winner===nA?'winner':'loser');
+  tB.className='sb-team '+(r.winner===nB?'winner':'loser');
+
+  const venueStr=r.homeTeam?`at ${r.homeTeam}`:'Neutral Site';
+  $('sbVenue').textContent=venueStr;
+
+  const paPct=(r.pA*100).toFixed(1);
+  const pbPct=(r.pB*100).toFixed(1);
+  $('probBarA').style.width=paPct+'%';
+  $('probBarA').textContent=paPct+'%';
+  $('probBarB').style.width=pbPct+'%';
+  $('probBarB').textContent=pbPct+'%';
+
+  $('ratingLabelA').textContent=nA;
+  $('ratingValA').textContent=r.rA.toFixed(1);
+  $('ratingLabelB').textContent=nB;
+  $('ratingValB').textContent=r.rB.toFixed(1);
+
+  const rows=$('edgeRows');
+  rows.innerHTML='';
+  r.edges.forEach(e=>{
+    const row=document.createElement('div');
+    row.className='edge-row';
+    const badgeCls=e.adv==='even'?'even':e.adv==='a'?'adv-a':'adv-b';
+    const badgeText=e.adv==='even'?'Even':e.mag;
+    row.innerHTML=`
+      <span class="edge-cat">${e.cat}</span>
+      <span class="edge-val a">${fmt(e.vA)}</span>
+      <span class="edge-badge ${badgeCls}">${badgeText}</span>
+      <span class="edge-val b">${fmt(e.vB)}</span>`;
+    rows.appendChild(row);
+  });
+}
+
+function fmt(v){
+  if(Math.abs(v)<10)return v.toFixed(2);
+  return v.toFixed(1);
+}
+
+// Run default prediction on load
+runPrediction();
+</script>
