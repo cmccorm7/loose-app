@@ -1,0 +1,10 @@
+# Your journal is your trading record. Keep it out of version control.
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+examples/example_journal.db
+
+# Generated bar data and exports
+sample_*.csv
+*_trades.csv

@@ -1,0 +1,3 @@
+# The trading system runs on the Python standard library alone.
+# The only dependency is the timezone database, which Windows does not ship.
+tzdata; platform_system == "Windows"
