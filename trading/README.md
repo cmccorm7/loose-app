@@ -10,7 +10,7 @@ Four layers, sharing one set of rules:
 | Layer | Module | What it does |
 |---|---|---|
 | **Risk** | `ym/risk.py` | Sizes every position from the stop distance, enforces daily/weekly loss limits, drawdown and give-back breakers, cooldowns, and a hard stop time. |
-| **Backtest** | `ym/backtest/` | Bar-by-bar engine with pessimistic fills — and it routes every signal through the *same* risk manager, so a strategy can't look good by taking trades your account would never have allowed. |
+| **Backtest** | `ym/backtest/`, `ym/sweep.py` | Bar-by-bar engine with pessimistic fills — and it routes every signal through the *same* risk manager, so a strategy can't look good by taking trades your account would never have allowed. Parameter sweeps report standard errors and an out-of-sample half. |
 | **Journal** | `ym/journal.py` | SQLite store for trades you really took, with a NinjaTrader importer. |
 | **Behavior** | `ym/behavior.py`, `ym/coach.py` | Finds the patterns in *how* you trade — the afternoon fade, the revenge re-entry, the give-back — and turns them into guardrails and in-session nudges. |
 
@@ -103,7 +103,10 @@ The engine is built to be pessimistic:
 - **Refused signals are reported, not dropped.** If the risk rules vetoed 80
   trades, the report says so and why — that's often the most useful output.
 
-Writing a strategy means answering two questions. `Signal` to enter, `Manage`
+Three strategies ship as worked examples: `orb` (opening range breakout),
+`ma_pullback`, and `support_rejection` — see below.
+
+Writing your own means answering two questions. `Signal` to enter, `Manage`
 to adjust or exit. Size is never the strategy's business:
 
 ```python
@@ -127,7 +130,108 @@ class OpenBreak(Strategy):
             return Manage(new_stop=trade.entry_price)   # breakeven at +1R
 ```
 
-## 3. Journal
+## 3. Buying the Nth rejection of a support line
+
+`support_rejection` is the "it has held three times, buy the next test" idea,
+built so it can actually be tested rather than assumed.
+
+```bash
+# levels want a slower timeframe than 1-minute bars
+python -m ym backtest YM_1min.txt --strategy support_rejection \
+    --symbol MYM --rth-only --minutes 5
+```
+
+How the pattern is defined, all of it configurable:
+
+- A **support line** is a cluster of confirmed swing lows within a tolerance
+  band (`tolerance_atr`, default 0.35 × ATR, or `tolerance_points` for a fixed
+  band). `ym/levels.py` maintains these bar by bar.
+- A **rejection** is price trading into that band and closing back above the
+  level, with `min_bars_between_touches` enforced so one long consolidation
+  isn't counted as three separate tests.
+- `min_rejections` counts **every** confirmed rejection, *including the swing
+  low that drew the line*. So `min_rejections=3` means: a low, two more tests
+  that held, and you buy the third.
+- The **stop** goes below the level's *floor* — the lowest price it has actually
+  traded to — not the line itself, which has already been hit by definition.
+- `direction=short` mirrors the whole thing onto resistance.
+
+Two things the implementation is careful about, because both would quietly
+invent edge that isn't there:
+
+**A level cannot exist before the bars that prove it.** A swing low at bar *j*
+is only a swing low once `pivot_strength` further bars have printed, so the
+level is created at bar *j + pivot_strength*, never at *j*. The bars in between
+are then re-scanned for rejections — they are all in the past, so that is
+honest, and it is what makes the forming low count as rejection one.
+
+**`min_rejections=1` is refused unless you opt in.** Buying the line-forming low
+means buying a bar you could not have identified at the time. Rather than
+silently behaving like `min_rejections=2` — which would make a sweep of 1,2,3,4
+report the first two as identical — it raises an error and tells you to pass
+`max_bars_since_touch=3` if you really want that late entry.
+
+### Does a level get stronger or weaker with each test?
+
+Worth settling before you trade it. The folk wisdom says a level that has held
+three times is well defended. The opposing argument is just as mechanical: each
+test *consumes* the resting bids defending it, so the fourth test has less
+underneath it than the first did.
+
+This is exactly what a sweep is for:
+
+```bash
+python -m ym sweep YM_1min.txt --strategy support_rejection --symbol MYM \
+    --rth-only --minutes 5 --sweep-param min_rejections --values 2,3,4,5 --split
+```
+
+```
+FIRST HALF (in sample)
+min_rejections     Trades   Win%     Net P&L    Exp R     +/-     PF  MaxDD%
+---------------------------------------------------------------------------
+2                     183  37.2%       94.00   +0.006   0.105   1.01    6.0%
+3                     115  31.3%   -1,890.00   -0.138   0.128   0.79    9.5%
+4                      61  36.1%      186.50   +0.005   0.184   1.04    3.9%
+
+Reading this:
+  Best in sample: min_rejections=2 (+0.006R).
+  Out of sample it did -0.223R over 72 trades, ranking 2 of 4.
+  It did not hold up. The in-sample ranking was most likely noise.
+  No configuration's expectancy cleared two standard errors, so the
+  differences between these rows are within noise.
+```
+
+(That run is on synthetic bars, which have no real support levels — a result of
+roughly zero is the correct answer and a good check that the engine isn't
+manufacturing edge. Your own data is the only run that means anything.)
+
+## 4. Sweeping a parameter without fooling yourself
+
+Running a strategy at four settings and keeping the best is not a test — it is
+four chances to find noise. `ym sweep` is built to make that visible:
+
+- **Every row carries a standard error** on its expectancy. `+0.08R ± 0.14` has
+  told you nothing, wherever it ranks. A `*` marks rows more than two standard
+  errors from zero.
+- **`--split`** re-runs each value on an earlier and a later stretch of your
+  data, cut on a session boundary, and reports whether the in-sample winner was
+  still a winner out of sample. This is the cheapest protection against
+  curve-fitting there is.
+- The header states **how many configurations were tried**, because the best of
+  eight looks better than the best of two for reasons unrelated to the market.
+
+It works on any strategy and any constructor parameter:
+
+```bash
+python -m ym sweep bars.csv --strategy orb --sweep-param range_minutes \
+    --values 15,30,45,60 --split
+python -m ym sweep bars.csv --strategy support_rejection \
+    --sweep-param target_r --values 1.5,2,3 -p min_rejections=3 --split
+```
+
+None of this makes a sweep safe. It makes a bad sweep legible.
+
+## 5. Journal
 
 The journal is what makes the behavioral layer possible, so two fields carry
 most of the weight:
@@ -167,7 +271,7 @@ The one thing it cannot sniff is the timezone. NinjaTrader exports in whatever
 timezone the platform is set to; pass `--tz` if that isn't US Eastern. Getting
 it wrong silently shifts every session boundary.
 
-## 4. Behavior — the part that watches how you trade
+## 6. Behavior — the part that watches how you trade
 
 ```bash
 python -m ym review --apply
@@ -256,14 +360,16 @@ trading/
 │   ├── core.py           Bar and Trade — P&L, R-multiples, MAE/MFE
 │   ├── risk.py           sizing, loss budgets, circuit breakers
 │   ├── metrics.py        expectancy, profit factor, drawdown, breakdowns
+│   ├── levels.py         support/resistance detection and rejection counting
+│   ├── sweep.py          parameter sweeps with an out-of-sample split
 │   ├── journal.py        SQLite journal + NinjaTrader import
 │   ├── behavior.py       the twelve detectors and guardrail synthesis
 │   ├── coach.py          in-session nudges
 │   ├── cli.py            python -m ym
 │   ├── backtest/         strategy interface and execution engine
-│   ├── strategies/       two worked examples
+│   ├── strategies/       three worked examples
 │   └── data/             loaders, synthetic bars, simulated trader
-├── tests/                197 tests, standard-library unittest
+├── tests/                279 tests, standard-library unittest
 └── examples/first_week.py
 ```
 
@@ -278,7 +384,7 @@ Two details worth knowing because they cause silent, wrong answers elsewhere:
 
 ```bash
 cd trading
-python -m unittest discover -s tests      # 197 tests, ~3 seconds
+python -m unittest discover -s tests      # 279 tests, ~13 seconds
 ```
 
 The behavioral tests assert both halves of the contract: detectors must fire on

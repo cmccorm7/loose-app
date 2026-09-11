@@ -217,3 +217,59 @@ class TestDemo(CliCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSweepCommand(CliCase):
+    def test_sweep_runs_and_prints_a_table(self):
+        output = self.run_cli(
+            "sweep", "--strategy", "support_rejection", "--symbol", "MYM",
+            "--sweep-param", "min_rejections", "--values", "2,3",
+            "--rth-only", "--minutes", "5", "--days", "40",
+        )
+        self.assertIn("Sweep of min_rejections", output)
+        self.assertIn("ALL DATA", output)
+        self.assertIn("configurations tried", output)
+
+    def test_split_reports_both_halves(self):
+        output = self.run_cli(
+            "sweep", "--strategy", "support_rejection", "--symbol", "MYM",
+            "--values", "2,3", "--rth-only", "--minutes", "5", "--days", "60",
+            "--split",
+        )
+        self.assertIn("FIRST HALF (in sample)", output)
+        self.assertIn("SECOND HALF (out of sample)", output)
+        self.assertIn("Reading this:", output)
+
+    def test_fixed_parameters_pass_through(self):
+        output = self.run_cli(
+            "sweep", "--symbol", "MYM", "--values", "2,3", "-p", "target_r=3.0",
+            "--rth-only", "--minutes", "5", "--days", "40",
+        )
+        self.assertIn("target_r=3.0", output)
+
+    def test_a_bad_value_is_an_error_not_a_traceback(self):
+        output = self.run_cli(
+            "sweep", "--symbol", "MYM", "--values", "1",
+            "--rth-only", "--minutes", "5", "--days", "40", expect=2,
+        )
+        self.assertIn("min_rejections=1", output)
+
+    def test_sweeping_another_strategys_parameter(self):
+        output = self.run_cli(
+            "sweep", "--strategy", "orb", "--sweep-param", "range_minutes",
+            "--values", "15,30", "--symbol", "MYM", "--days", "30",
+        )
+        self.assertIn("Sweep of range_minutes", output)
+
+
+class TestBacktestResampling(CliCase):
+    def test_resampling_reduces_the_bar_count(self):
+        one = self.run_cli("backtest", "--strategy", "support_rejection",
+                           "--symbol", "MYM", "--days", "20", "--rth-only")
+        five = self.run_cli("backtest", "--strategy", "support_rejection",
+                            "--symbol", "MYM", "--days", "20", "--rth-only",
+                            "--minutes", "5")
+        def bars(text):
+            line = next(l for l in text.splitlines() if "Bars processed" in l)
+            return int(line.split()[-1].replace(",", ""))
+        self.assertGreater(bars(one), bars(five))

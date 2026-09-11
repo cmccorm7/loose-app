@@ -14,7 +14,9 @@ from . import behavior as behavior_module
 from .backtest import BacktestConfig, Backtester
 from .coach import Coach
 from .core import Direction, ExitReason, Trade
-from .data import generate_bars, load_bars, resample, sniff, summarize, write_csv
+from .data import (
+    filter_session, generate_bars, load_bars, resample, sniff, summarize, write_csv,
+)
 from .data.trader import Habits, simulate_trader_history
 from .instruments import MYM, REGISTRY, YM, get_instrument
 from .journal import Journal
@@ -22,6 +24,7 @@ from .metrics import GROUPERS, compute_metrics, format_breakdown
 from .risk import RiskLimits, RiskManager, SizingMethod
 from .sessions import DEFAULT_SESSION, exchange_tz
 from .strategies import REGISTRY as STRATEGIES
+from .sweep import sweep
 
 
 # --------------------------------------------------------------------------
@@ -207,6 +210,11 @@ def cmd_backtest(args: argparse.Namespace) -> int:
         print("No data file given, so this ran on synthetic bars. The numbers "
               "below test the machinery, not the strategy.\n")
 
+    if args.rth_only:
+        bars = filter_session(bars, "rth")
+    if args.minutes:
+        bars = resample(bars, args.minutes)
+
     strategy_class = STRATEGIES[args.strategy]
     params = dict(item.split("=", 1) for item in args.param or [])
     strategy = strategy_class(**{key: coerce(value) for key, value in params.items()})
@@ -231,6 +239,49 @@ def cmd_backtest(args: argparse.Namespace) -> int:
         with Journal(args.db) as journal:
             count = journal.record_many(result.trades, source=f"backtest:{strategy.name}")
         print(f"recorded {count} trades in {args.db}")
+    return 0
+
+
+def cmd_sweep(args: argparse.Namespace) -> int:
+    """Test one parameter across a range of values, with an out-of-sample half."""
+    instrument = instrument_from_args(args)
+    if args.file:
+        bars = load_bars(args.file, tz=args.tz)
+    else:
+        bars = generate_bars(
+            date.fromisoformat(args.start), days=args.days, seed=args.seed
+        )
+        print("No data file given, so this ran on synthetic bars. A sweep on a "
+              "random walk measures nothing but your costs.\n")
+    if args.rth_only:
+        bars = filter_session(bars, "rth")
+    if args.minutes:
+        bars = resample(bars, args.minutes)
+
+    fixed = {
+        key: coerce(value)
+        for key, value in (item.split("=", 1) for item in args.param or [])
+    }
+    values = [coerce(item) for item in args.values.split(",")]
+
+    report = sweep(
+        instrument=instrument,
+        strategy_class=STRATEGIES[args.strategy],
+        param=args.sweep_param,
+        values=values,
+        bars=bars,
+        equity=args.equity,
+        limits=limits_from_args(args),
+        config=BacktestConfig(
+            slippage_ticks=args.slippage,
+            trade_sessions=tuple(args.sessions.split(",")),
+            pessimistic_intrabar=not args.optimistic,
+        ),
+        fixed_params=fixed,
+        split=args.split,
+        split_fraction=args.split_fraction,
+    )
+    print(report.format_report())
     return 0
 
 
@@ -584,6 +635,10 @@ def build_parser() -> argparse.ArgumentParser:
     backtest.add_argument("--hold-overnight", action="store_true")
     backtest.add_argument("--optimistic", action="store_true",
                           help="assume the target fills first when a bar holds both")
+    backtest.add_argument("--minutes", type=int,
+                          help="resample the bars to this timeframe first")
+    backtest.add_argument("--rth-only", action="store_true",
+                          help="drop overnight bars before resampling")
     backtest.add_argument("--tz", default="America/New_York")
     backtest.add_argument("--start", default="2026-06-01", help="synthetic start date")
     backtest.add_argument("--days", type=int, default=40, help="synthetic day count")
@@ -594,6 +649,43 @@ def build_parser() -> argparse.ArgumentParser:
     add_risk_arguments(backtest)
     add_db_argument(backtest)
     backtest.set_defaults(func=cmd_backtest)
+
+    # sweep -----------------------------------------------------------------
+    sweeper = subparsers.add_parser(
+        "sweep",
+        help="test one strategy parameter across several values",
+        description="Run a strategy once per value of one parameter and compare. "
+                    "Use --split to check whether the in-sample winner survives "
+                    "out of sample; without it a sweep mostly measures luck.",
+    )
+    sweeper.add_argument("file", nargs="?", help="bar data file (omit for synthetic)")
+    sweeper.add_argument("--strategy", default="support_rejection",
+                         choices=sorted(STRATEGIES))
+    sweeper.add_argument("--sweep-param", default="min_rejections",
+                         help="the parameter to vary")
+    sweeper.add_argument("--values", default="2,3,4,5",
+                         help="comma-separated values to try")
+    sweeper.add_argument("-p", "--param", action="append", metavar="KEY=VALUE",
+                         help="parameter held fixed across the sweep, repeatable")
+    sweeper.add_argument("--split", action="store_true",
+                         help="also report an out-of-sample second half")
+    sweeper.add_argument("--split-fraction", type=float, default=0.5)
+    sweeper.add_argument("--symbol", default="MYM", choices=sorted(REGISTRY))
+    sweeper.add_argument("--equity", type=float, default=25000.0)
+    sweeper.add_argument("--commission", type=float)
+    sweeper.add_argument("--slippage", type=float, default=1.0)
+    sweeper.add_argument("--sessions", default="rth")
+    sweeper.add_argument("--optimistic", action="store_true")
+    sweeper.add_argument("--minutes", type=int,
+                         help="resample the bars to this timeframe first")
+    sweeper.add_argument("--rth-only", action="store_true",
+                         help="drop overnight bars before resampling")
+    sweeper.add_argument("--tz", default="America/New_York")
+    sweeper.add_argument("--start", default="2026-03-02", help="synthetic start date")
+    sweeper.add_argument("--days", type=int, default=120, help="synthetic day count")
+    sweeper.add_argument("--seed", type=int, default=11)
+    add_risk_arguments(sweeper)
+    sweeper.set_defaults(func=cmd_sweep)
 
     # journal ---------------------------------------------------------------
     journal = subparsers.add_parser("journal", help="record and analyze real trades")
