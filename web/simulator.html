@@ -1,4 +1,4 @@
-<title>CFB Bet Simulator</title>
+<title>CFB Bet Tracker</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap">
 <style>
 :root {
@@ -177,9 +177,7 @@ body {
   outline: 2px solid var(--gold-dim);
   outline-offset: 1px;
 }
-.form-input {
-  font-variant-numeric: tabular-nums;
-}
+.form-input { font-variant-numeric: tabular-nums; }
 
 .btn {
   padding: 8px 20px;
@@ -197,10 +195,21 @@ body {
 .btn:disabled { opacity: 0.4; cursor: default; }
 .btn-add { background: var(--green); color: #fff; }
 .btn-add:hover:not(:disabled) { background: var(--green-light); }
-.btn-sim { background: var(--gold-dim); color: #fff; width: 100%; padding: 10px; font-size: 0.95rem; }
-.btn-sim:hover:not(:disabled) { background: var(--gold); }
 .btn-clear { background: var(--border); color: var(--text-secondary); font-size: 0.75rem; padding: 5px 12px; }
 .btn-clear:hover { background: var(--text-muted); color: var(--bg); }
+
+.thresh-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+.thresh-row .form-label { margin: 0; }
+.thresh-row .form-input { width: 70px; padding: 5px 8px; font-size: 0.82rem; }
+.thresh-note { color: var(--text-muted); font-size: 0.76rem; margin-left: auto; }
 
 .games-wrap { overflow-x: auto; }
 .games-table {
@@ -212,23 +221,25 @@ body {
 .games-table th {
   font-family: 'Oswald', sans-serif;
   font-weight: 500;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
   text-align: left;
-  padding: 8px 8px 6px;
+  padding: 8px 6px 6px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 .games-table th.r { text-align: right; }
+.games-table th.c { text-align: center; }
 .games-table td {
-  padding: 7px 8px;
+  padding: 7px 6px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 .games-table tr:last-child td { border-bottom: none; }
 .games-table td.r { text-align: right; }
+.games-table td.c { text-align: center; }
 .games-table td.team-name {
   font-weight: 600;
   color: var(--text);
@@ -242,14 +253,34 @@ body {
 .edge-pos { color: var(--green-light); font-weight: 600; }
 .edge-neg { color: var(--red-light); font-weight: 600; }
 .edge-zero { color: var(--text-muted); }
-.venue-tag {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  padding: 1px 5px;
+.pnl-win { color: var(--green-light); font-weight: 700; }
+.pnl-loss { color: var(--red-light); font-weight: 700; }
+.pnl-pending { color: var(--text-muted); font-style: italic; }
+
+.outcome-select {
+  padding: 3px 6px;
+  border-radius: 4px;
   border: 1px solid var(--border);
-  border-radius: 3px;
-  white-space: nowrap;
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  text-align: center;
+  min-width: 72px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%238d99ae'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  padding-right: 18px;
 }
+.outcome-select.won { background-color: var(--green-dim); color: var(--green-light); border-color: var(--green); }
+.outcome-select.lost { background-color: var(--red-dim); color: var(--red-light); border-color: var(--red); }
+.outcome-select:focus { outline: 2px solid var(--gold-dim); outline-offset: 1px; }
+
+.row-below-thresh { opacity: 0.4; }
+
 .rm-btn {
   background: none;
   border: none;
@@ -268,19 +299,10 @@ body {
   font-size: 0.85rem;
 }
 
-.controls-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.results[hidden] { display: none !important; }
-.stats-grid {
+.dashboard {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin-bottom: 16px;
 }
 .stat-card {
   text-align: center;
@@ -315,46 +337,19 @@ body {
 .sv-red { color: var(--red-light); }
 .sv-gold { color: var(--gold); }
 .sv-teal { color: var(--teal); }
+.sv-text { color: var(--text); }
 
-.chart-label {
-  font-family: 'Oswald', sans-serif;
-  font-weight: 500;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-.chart-wrap {
+.pending-note {
+  margin-top: 12px;
+  padding: 10px 14px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 12px;
-}
-canvas { display: block; width: 100%; height: 220px; }
-
-.detail-table {
-  width: 100%;
-  border-collapse: collapse;
   font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-  margin-top: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
-.detail-table th {
-  font-family: 'Oswald', sans-serif;
-  font-weight: 500;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  text-align: left;
-  padding: 6px 6px 4px;
-  border-bottom: 1px solid var(--border);
-}
-.detail-table th.r { text-align: right; }
-.detail-table td { padding: 5px 6px; border-bottom: 1px solid var(--border); }
-.detail-table tr:last-child td { border-bottom: none; }
-.detail-table td.r { text-align: right; }
+.pending-note strong { color: var(--text); }
 
 .footer-note {
   margin-top: 16px;
@@ -367,9 +362,9 @@ canvas { display: block; width: 100%; height: 220px; }
 
 @media (max-width: 540px) {
   .form-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .controls-row { grid-template-columns: 1fr; }
+  .dashboard { grid-template-columns: repeat(2, 1fr); }
   .games-table { font-size: 0.78rem; }
+  .thresh-row { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) {
   .btn { transition: none; }
@@ -378,14 +373,15 @@ canvas { display: block; width: 100%; height: 220px; }
 
 <div class="app">
   <div class="header">
-    <h1>CFB Bet Simulator</h1>
-    <p>Robinhood Event Contracts &middot; Monte Carlo Analysis</p>
+    <h1>CFB Bet Tracker</h1>
+    <p>Robinhood Event Contracts &middot; Lock Prices &middot; Track Outcomes</p>
   </div>
 
   <div class="explainer">
-    <strong>How it works:</strong> On Robinhood, you buy event contracts priced at the market's implied probability.
-    Buy at <span class="tag">$0.85</span> &rarr; profit <span class="tag">$0.15</span> if the team wins, lose <span class="tag">$0.85</span> if they don't.
-    This tool compares our model's win probability against the market price to find <strong>edge</strong>, then runs 10,000 simulated seasons to project your P&amp;L.
+    <strong>How it works:</strong> Add games with their Robinhood contract prices to lock in your bet slip.
+    As games finish, mark each as <span class="tag">Won</span> or <span class="tag">Lost</span> to see your real P&amp;L.
+    Buy at <strong>$0.87</strong> &rarr; profit <strong>$0.13</strong> if they win, lose <strong>$0.87</strong> if they don't.
+    Your games and outcomes are saved automatically.
   </div>
 
   <div class="panel">
@@ -423,8 +419,13 @@ canvas { display: block; width: 100%; height: 220px; }
 
   <div class="panel">
     <div class="panel-head">
-      <span class="panel-title">Games &amp; Edge Analysis</span>
+      <span class="panel-title">Bet Slip</span>
       <button class="btn btn-clear" id="clearBtn">Clear All</button>
+    </div>
+    <div class="thresh-row">
+      <span class="form-label">Min Price</span>
+      <input type="number" class="form-input" id="threshInput" min="0.50" max="0.99" step="0.01" value="0.80">
+      <span class="thresh-note">Games below threshold are dimmed</span>
     </div>
     <div class="panel-body" style="padding:0;">
       <div class="games-wrap">
@@ -435,52 +436,20 @@ canvas { display: block; width: 100%; height: 220px; }
 
   <div class="panel">
     <div class="panel-head">
-      <span class="panel-title">Simulation</span>
+      <span class="panel-title">Dashboard</span>
+      <span id="dashMeta" style="font-size:0.72rem;color:var(--text-muted);font-variant-numeric:tabular-nums;"></span>
     </div>
     <div class="panel-body">
-      <div class="controls-row">
-        <div class="form-group">
-          <span class="form-label">Min Price Threshold</span>
-          <input type="number" class="form-input" id="threshInput" min="0.50" max="0.99" step="0.01" value="0.80">
-        </div>
-        <div class="form-group">
-          <span class="form-label">Iterations</span>
-          <select class="form-select" id="iterSelect">
-            <option value="1000">1,000</option>
-            <option value="5000">5,000</option>
-            <option value="10000" selected>10,000</option>
-            <option value="50000">50,000</option>
-          </select>
-        </div>
-      </div>
-      <button class="btn btn-sim" id="simBtn">Run Simulation</button>
-    </div>
-  </div>
-
-  <div class="results" id="results" hidden>
-    <div class="panel">
-      <div class="panel-head">
-        <span class="panel-title">Simulation Results</span>
-        <span id="simMeta" style="font-size:0.72rem;color:var(--text-muted);font-variant-numeric:tabular-nums;"></span>
-      </div>
-      <div class="panel-body">
-        <div class="stats-grid" id="statsGrid"></div>
-        <div class="chart-label">P&amp;L Distribution (per slate)</div>
-        <div class="chart-wrap">
-          <canvas id="histogram"></canvas>
-        </div>
-        <div class="chart-label" style="margin-top:14px;">Per-Game Breakdown</div>
-        <div class="games-wrap">
-          <table class="detail-table" id="detailTable"></table>
-        </div>
-      </div>
+      <div class="dashboard" id="dashboard"></div>
+      <div id="pendingNote"></div>
     </div>
   </div>
 
   <div class="footer-note">
     Composite power rating: Elo 25%, Offense 20%, Defense 20%, Efficiency 15%, SOS 10%, Record 10%.
-    Win probability via logistic function. Robinhood contract prices must be entered manually &mdash; no API integration.
-    This is a simulation tool, not financial advice.
+    Win probability via logistic function. Robinhood contract prices entered manually.
+    Your bet slip is saved in your browser &mdash; come back after games finish to mark outcomes.
+    This is a tracking tool, not financial advice.
   </div>
 </div>
 
@@ -623,7 +592,6 @@ const R={
 const W={elo:.25,off:.20,def:.20,eff:.15,sos:.10,rec:.10};
 const HF=3;
 const SR={ppg:[10,50],papg:[10,45],ypp:[4,7.5],yppD:[4,7.5],to:[-2,2],td:[.25,.55],rz:[.7,.98],sk:[.5,4],pen:[30,90],sos:[.3,.7],elo:[1200,1700],wp:[0,1]};
-
 function norm(v,lo,hi,inv){
   if(hi===lo)return 50;
   let s=(v-lo)/(hi-lo)*100;
@@ -658,6 +626,22 @@ let games=[];
 let nextId=1;
 const $=id=>document.getElementById(id);
 
+// ── Persistence ──
+function saveState(){
+  try{ localStorage.setItem('cfb-bets-v2',JSON.stringify(games)); }catch(e){}
+}
+function loadState(){
+  try{
+    const saved=localStorage.getItem('cfb-bets-v2');
+    if(saved){
+      games=JSON.parse(saved);
+      nextId=games.length?Math.max(...games.map(g=>g.id))+1:1;
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
 // ── Populate dropdowns ──
 const teamNames=Object.keys(R).sort();
 function fillDropdown(sel,selected){
@@ -672,49 +656,152 @@ function fillDropdown(sel,selected){
 fillDropdown($('betTeam'),'Georgia');
 fillDropdown($('oppTeam'),'Kentucky');
 
-// ── Add game ──
-function addGame(fav,opp,venue,price){
+// ── Add / remove game ──
+function addGame(fav,opp,venue,price,outcome){
   if(fav===opp)return;
   const r=modelPredict(fav,opp,venue);
   const modelProb=r.pA;
   const edge=modelProb-price;
-  games.push({id:nextId++,favorite:fav,opponent:opp,venue,price,modelProb,edge});
-  renderGames();
+  games.push({id:nextId++,favorite:fav,opponent:opp,venue,price,modelProb,edge,outcome:outcome||'pending'});
+  saveState();
+  render();
 }
 
 function removeGame(id){
   games=games.filter(g=>g.id!==id);
-  renderGames();
+  saveState();
+  render();
 }
 
-// ── Render games table ──
+function setOutcome(id,outcome){
+  const g=games.find(g=>g.id===id);
+  if(g){g.outcome=outcome;saveState();render();}
+}
+
+// ── Render ──
+function render(){
+  renderGames();
+  renderDashboard();
+}
+
 function renderGames(){
   const el=$('gamesContent');
+  const thresh=parseFloat($('threshInput').value)||0.80;
   if(games.length===0){
-    el.innerHTML='<div class="no-games">No games added. Add matchups above to analyze.</div>';
+    el.innerHTML='<div class="no-games">No games added yet. Add matchups above to build your bet slip.</div>';
     return;
   }
   const venueLabel=v=>v==='a'?'Home':v==='b'?'Away':'Neutral';
   let html='<table class="games-table"><thead><tr>';
-  html+='<th>Bet On</th><th></th><th>Opponent</th><th>Site</th>';
-  html+='<th class="r">Price</th><th class="r">Model</th><th class="r">Edge</th><th></th>';
+  html+='<th>Bet On</th><th></th><th>Opponent</th>';
+  html+='<th class="r">Price</th><th class="r">Model</th><th class="r">Edge</th>';
+  html+='<th class="c">Outcome</th><th class="r">P&amp;L</th><th></th>';
   html+='</tr></thead><tbody>';
   for(const g of games){
+    const belowThresh=g.price<thresh;
     const edgeCls=g.edge>0.005?'edge-pos':g.edge<-0.005?'edge-neg':'edge-zero';
     const edgeSign=g.edge>0?'+':'';
-    html+=`<tr>
+    let pnlHtml='<span class="pnl-pending">&mdash;</span>';
+    if(g.outcome==='won') pnlHtml=`<span class="pnl-win">+$${(1-g.price).toFixed(2)}</span>`;
+    if(g.outcome==='lost') pnlHtml=`<span class="pnl-loss">-$${g.price.toFixed(2)}</span>`;
+    const wonSel=g.outcome==='won'?' selected':'';
+    const lostSel=g.outcome==='lost'?' selected':'';
+    const pendSel=g.outcome==='pending'?' selected':'';
+    const ocCls=g.outcome==='won'?'won':g.outcome==='lost'?'lost':'';
+    html+=`<tr class="${belowThresh?'row-below-thresh':''}">
       <td class="team-name">${g.favorite}</td>
       <td class="vs-cell">vs</td>
       <td>${g.opponent}</td>
-      <td><span class="venue-tag">${venueLabel(g.venue)}</span></td>
       <td class="r">$${g.price.toFixed(2)}</td>
       <td class="r">${(g.modelProb*100).toFixed(1)}%</td>
       <td class="r ${edgeCls}">${edgeSign}${(g.edge*100).toFixed(1)}%</td>
+      <td class="c"><select class="outcome-select ${ocCls}" onchange="setOutcome(${g.id},this.value)" aria-label="Outcome">
+        <option value="pending"${pendSel}>Pending</option>
+        <option value="won"${wonSel}>Won &#10003;</option>
+        <option value="lost"${lostSel}>Lost &#10007;</option>
+      </select></td>
+      <td class="r">${pnlHtml}</td>
       <td><button class="rm-btn" onclick="removeGame(${g.id})" aria-label="Remove">&times;</button></td>
     </tr>`;
   }
   html+='</tbody></table>';
   el.innerHTML=html;
+}
+
+function renderDashboard(){
+  const thresh=parseFloat($('threshInput').value)||0.80;
+  const qualifying=games.filter(g=>g.price>=thresh);
+  const settled=qualifying.filter(g=>g.outcome!=='pending');
+  const wins=qualifying.filter(g=>g.outcome==='won');
+  const losses=qualifying.filter(g=>g.outcome==='lost');
+  const pending=qualifying.filter(g=>g.outcome==='pending');
+
+  const totalInvested=qualifying.reduce((s,g)=>s+g.price,0);
+  const settledInvested=settled.reduce((s,g)=>s+g.price,0);
+  const actualPnl=wins.reduce((s,g)=>s+(1-g.price),0)-losses.reduce((s,g)=>s+g.price,0);
+  const actualRoi=settledInvested>0?(actualPnl/settledInvested*100):0;
+
+  const projectedRemaining=pending.reduce((s,g)=>s+(g.modelProb*(1-g.price)-(1-g.modelProb)*g.price),0);
+  const projectedTotal=actualPnl+projectedRemaining;
+
+  const sign=v=>v>=0?'+':'';
+  const pnlCls=v=>v>=0?'sv-green':'sv-red';
+
+  $('dashMeta').textContent=`${qualifying.length} qualifying bets at $${thresh.toFixed(2)}+`;
+
+  let html='';
+  html+=`<div class="stat-card">
+    <div class="stat-label">Bets Taken</div>
+    <div class="stat-value sv-gold">${qualifying.length}</div>
+    <div class="stat-sub">$${totalInvested.toFixed(2)} invested</div>
+  </div>`;
+  html+=`<div class="stat-card">
+    <div class="stat-label">Record</div>
+    <div class="stat-value sv-text">${wins.length} &ndash; ${losses.length}</div>
+    <div class="stat-sub">${pending.length} pending</div>
+  </div>`;
+  html+=`<div class="stat-card">
+    <div class="stat-label">Actual P&amp;L</div>
+    <div class="stat-value ${pnlCls(actualPnl)}">${settled.length>0?sign(actualPnl)+'$'+Math.abs(actualPnl).toFixed(2):'&mdash;'}</div>
+    <div class="stat-sub">${settled.length>0?sign(actualRoi)+Math.abs(actualRoi).toFixed(1)+'% ROI':'no settled bets'}</div>
+  </div>`;
+
+  if(pending.length>0){
+    html+=`<div class="stat-card">
+      <div class="stat-label">Projected Remaining</div>
+      <div class="stat-value ${pnlCls(projectedRemaining)}">${sign(projectedRemaining)}$${Math.abs(projectedRemaining).toFixed(2)}</div>
+      <div class="stat-sub">${pending.length} games left</div>
+    </div>`;
+    html+=`<div class="stat-card">
+      <div class="stat-label">Projected Total</div>
+      <div class="stat-value ${pnlCls(projectedTotal)}">${sign(projectedTotal)}$${Math.abs(projectedTotal).toFixed(2)}</div>
+      <div class="stat-sub">actual + model forecast</div>
+    </div>`;
+    const projRoi=totalInvested>0?(projectedTotal/totalInvested*100):0;
+    html+=`<div class="stat-card">
+      <div class="stat-label">Projected ROI</div>
+      <div class="stat-value ${pnlCls(projRoi)}">${sign(projRoi)}${Math.abs(projRoi).toFixed(1)}%</div>
+      <div class="stat-sub">if model holds</div>
+    </div>`;
+  }
+
+  $('dashboard').innerHTML=html;
+
+  if(pending.length>0&&settled.length<qualifying.length){
+    $('pendingNote').innerHTML=`<div class="pending-note">
+      <strong>${pending.length} game${pending.length>1?'s':''} still pending.</strong>
+      Come back after they finish and mark each as Won or Lost. Your bet slip is saved automatically.
+    </div>`;
+  } else if(settled.length===qualifying.length&&qualifying.length>0){
+    const verdict=actualPnl>0?'Profitable slate!':'Tough day.';
+    $('pendingNote').innerHTML=`<div class="pending-note">
+      <strong>All games settled.</strong> ${verdict}
+      Final P&amp;L: <strong class="${pnlCls(actualPnl)}">${sign(actualPnl)}$${Math.abs(actualPnl).toFixed(2)}</strong>
+      on $${settledInvested.toFixed(2)} invested (${sign(actualRoi)}${Math.abs(actualRoi).toFixed(1)}% ROI).
+    </div>`;
+  } else {
+    $('pendingNote').innerHTML='';
+  }
 }
 
 $('addBtn').addEventListener('click',()=>{
@@ -729,214 +816,14 @@ $('addBtn').addEventListener('click',()=>{
 
 $('clearBtn').addEventListener('click',()=>{
   games=[];
-  renderGames();
-  $('results').hidden=true;
+  saveState();
+  render();
 });
 
-// ── Monte Carlo Simulation ──
-function runSimulation(){
-  const threshold=parseFloat($('threshInput').value)||0.80;
-  const iterations=parseInt($('iterSelect').value)||10000;
-  const qualifying=games.filter(g=>g.price>=threshold);
+$('threshInput').addEventListener('change',render);
 
-  if(qualifying.length===0){
-    $('results').hidden=true;
-    return;
-  }
-
-  const totalInvested=qualifying.reduce((s,g)=>s+g.price,0);
-  const pnls=[];
-  const winCounts=new Array(qualifying.length).fill(0);
-
-  for(let i=0;i<iterations;i++){
-    let pnl=0;
-    for(let j=0;j<qualifying.length;j++){
-      const g=qualifying[j];
-      if(Math.random()<g.modelProb){
-        pnl+=(1-g.price);
-        winCounts[j]++;
-      } else {
-        pnl-=g.price;
-      }
-    }
-    pnls.push(pnl);
-  }
-
-  pnls.sort((a,b)=>a-b);
-  const mean=pnls.reduce((s,v)=>s+v,0)/iterations;
-  const median=pnls[Math.floor(iterations/2)];
-  const p5=pnls[Math.floor(iterations*0.05)];
-  const p95=pnls[Math.floor(iterations*0.95)];
-  const profitPct=pnls.filter(v=>v>0).length/iterations*100;
-  const roi=mean/totalInvested*100;
-
-  displayResults({qualifying,iterations,totalInvested,mean,median,p5,p95,profitPct,roi,pnls,winCounts});
-}
-
-function displayResults(d){
-  $('results').hidden=false;
-  $('simMeta').textContent=`${d.iterations.toLocaleString()} iterations · ${d.qualifying.length} bets`;
-
-  const meanCls=d.mean>=0?'sv-green':'sv-red';
-  const roiCls=d.roi>=0?'sv-green':'sv-red';
-  const sign=v=>v>=0?'+':'';
-
-  $('statsGrid').innerHTML=`
-    <div class="stat-card">
-      <div class="stat-label">Total Invested</div>
-      <div class="stat-value sv-gold">$${d.totalInvested.toFixed(2)}</div>
-      <div class="stat-sub">${d.qualifying.length} contracts</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Expected P&amp;L</div>
-      <div class="stat-value ${meanCls}">${sign(d.mean)}$${Math.abs(d.mean).toFixed(2)}</div>
-      <div class="stat-sub">median ${sign(d.median)}$${Math.abs(d.median).toFixed(2)}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Expected ROI</div>
-      <div class="stat-value ${roiCls}">${sign(d.roi)}${Math.abs(d.roi).toFixed(1)}%</div>
-      <div class="stat-sub">per slate</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Profit Chance</div>
-      <div class="stat-value sv-teal">${d.profitPct.toFixed(1)}%</div>
-      <div class="stat-sub">of simulations</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Best Case (95th)</div>
-      <div class="stat-value sv-green">${sign(d.p95)}$${Math.abs(d.p95).toFixed(2)}</div>
-      <div class="stat-sub">top 5% outcome</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Worst Case (5th)</div>
-      <div class="stat-value sv-red">${sign(d.p5)}$${Math.abs(d.p5).toFixed(2)}</div>
-      <div class="stat-sub">bottom 5% outcome</div>
-    </div>`;
-
-  drawHistogram(d.pnls);
-
-  let dtHtml='<thead><tr><th>Bet On</th><th>vs</th><th class="r">Price</th><th class="r">Model</th><th class="r">Edge</th><th class="r">Sim Win%</th><th class="r">EV</th></tr></thead><tbody>';
-  for(let j=0;j<d.qualifying.length;j++){
-    const g=d.qualifying[j];
-    const simWin=(d.winCounts[j]/d.iterations*100).toFixed(1);
-    const ev=g.modelProb*(1-g.price)-(1-g.modelProb)*g.price;
-    const evCls=ev>=0?'edge-pos':'edge-neg';
-    const edgeCls=g.edge>0.005?'edge-pos':g.edge<-0.005?'edge-neg':'edge-zero';
-    dtHtml+=`<tr>
-      <td class="team-name">${g.favorite}</td>
-      <td>${g.opponent}</td>
-      <td class="r">$${g.price.toFixed(2)}</td>
-      <td class="r">${(g.modelProb*100).toFixed(1)}%</td>
-      <td class="r ${edgeCls}">${g.edge>0?'+':''}${(g.edge*100).toFixed(1)}%</td>
-      <td class="r">${simWin}%</td>
-      <td class="r ${evCls}">${ev>=0?'+':''}$${Math.abs(ev).toFixed(3)}</td>
-    </tr>`;
-  }
-  dtHtml+='</tbody>';
-  $('detailTable').innerHTML=dtHtml;
-
-  $('results').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-// ── Histogram ──
-function drawHistogram(pnls){
-  const canvas=$('histogram');
-  const dpr=window.devicePixelRatio||1;
-  const rect=canvas.getBoundingClientRect();
-  canvas.width=rect.width*dpr;
-  canvas.height=rect.height*dpr;
-  const ctx=canvas.getContext('2d');
-  ctx.scale(dpr,dpr);
-  const w=rect.width,h=rect.height;
-
-  const pad={top:12,right:14,bottom:32,left:42};
-  const plotW=w-pad.left-pad.right;
-  const plotH=h-pad.top-pad.bottom;
-
-  const min=pnls[0];
-  const max=pnls[pnls.length-1];
-  const range=max-min||1;
-  const binCount=Math.min(40,Math.max(15,Math.ceil(Math.sqrt(pnls.length/10))));
-  const binWidth=range/binCount;
-
-  const bins=new Array(binCount).fill(0);
-  for(const v of pnls){
-    const idx=Math.min(Math.floor((v-min)/binWidth),binCount-1);
-    bins[idx]++;
-  }
-  const maxBin=Math.max(...bins);
-
-  ctx.clearRect(0,0,w,h);
-
-  const cs=getComputedStyle(document.documentElement);
-  const greenC=cs.getPropertyValue('--green-light').trim()||'#52b788';
-  const redC=cs.getPropertyValue('--red-light').trim()||'#e5383b';
-  const mutedC=cs.getPropertyValue('--text-muted').trim()||'#546178';
-  const borderC=cs.getPropertyValue('--border').trim()||'#1d2d4a';
-  const textC=cs.getPropertyValue('--text-secondary').trim()||'#8d99ae';
-
-  // grid lines
-  ctx.strokeStyle=borderC;
-  ctx.lineWidth=0.5;
-  for(let i=0;i<=4;i++){
-    const y=pad.top+plotH*(1-i/4);
-    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+plotW,y);ctx.stroke();
-  }
-
-  // bars
-  const barW=plotW/binCount;
-  for(let i=0;i<binCount;i++){
-    const barH=(bins[i]/maxBin)*plotH;
-    const x=pad.left+i*barW;
-    const y=pad.top+plotH-barH;
-    const binCenter=min+(i+0.5)*binWidth;
-    ctx.fillStyle=binCenter>=0?greenC:redC;
-    ctx.globalAlpha=0.8;
-    ctx.fillRect(x+0.5,y,barW-1,barH);
-    ctx.globalAlpha=1;
-  }
-
-  // zero line
-  if(min<0&&max>0){
-    const zeroX=pad.left+((0-min)/range)*plotW;
-    ctx.strokeStyle=textC;
-    ctx.lineWidth=1.5;
-    ctx.setLineDash([4,3]);
-    ctx.beginPath();ctx.moveTo(zeroX,pad.top);ctx.lineTo(zeroX,pad.top+plotH);ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle=textC;
-    ctx.font='600 10px Oswald, sans-serif';
-    ctx.textAlign='center';
-    ctx.fillText('$0',zeroX,pad.top+plotH+14);
-  }
-
-  // x-axis labels
-  ctx.fillStyle=mutedC;
-  ctx.font='10px "Source Sans 3", sans-serif';
-  ctx.textAlign='center';
-  const labelCount=6;
-  for(let i=0;i<=labelCount;i++){
-    const val=min+(range*i/labelCount);
-    const x=pad.left+(plotW*i/labelCount);
-    const label=(val>=0?'+':'')+val.toFixed(2);
-    ctx.fillText(label,x,pad.top+plotH+24);
-  }
-
-  // y-axis label
-  ctx.fillStyle=mutedC;
-  ctx.font='10px "Source Sans 3", sans-serif';
-  ctx.textAlign='right';
-  for(let i=0;i<=4;i++){
-    const y=pad.top+plotH*(1-i/4);
-    const val=Math.round(maxBin*i/4);
-    ctx.fillText(val.toLocaleString(),pad.left-5,y+3);
-  }
-}
-
-$('simBtn').addEventListener('click',runSimulation);
-
-// ── Sept 12, 2026 — Robinhood live prices ──
-const sampleGames=[
+// ── Initialize ──
+const defaultGames=[
   {fav:"Georgia",opp:"Western Kentucky",venue:"a",price:0.99},
   {fav:"Virginia Tech",opp:"Old Dominion",venue:"a",price:0.99},
   {fav:"Kansas State",opp:"Wake Forest",venue:"a",price:0.95},
@@ -947,13 +834,10 @@ const sampleGames=[
   {fav:"East Carolina",opp:"Appalachian State",venue:"a",price:0.52},
   {fav:"Michigan",opp:"Oklahoma",venue:"a",price:0.52},
 ];
-sampleGames.forEach(g=>addGame(g.fav,g.opp,g.venue,g.price));
 
-// auto-resize histogram on window resize
-window.addEventListener('resize',()=>{
-  if(!$('results').hidden){
-    const last=games.filter(g=>g.price>=parseFloat($('threshInput').value||0.80));
-    if(last.length>0) runSimulation();
-  }
-});
+if(!loadState()){
+  defaultGames.forEach(g=>addGame(g.fav,g.opp,g.venue,g.price));
+} else {
+  render();
+}
 </script>
