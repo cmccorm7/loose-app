@@ -935,18 +935,17 @@ function drawHistogram(pnls){
 
 $('simBtn').addEventListener('click',runSimulation);
 
-// ── Pre-populate sample games ──
+// ── Sept 12, 2026 — Robinhood live prices ──
 const sampleGames=[
-  {fav:"Georgia",opp:"Kentucky",venue:"a",price:0.88},
-  {fav:"Ohio State",opp:"Toledo",venue:"a",price:0.96},
-  {fav:"Texas",opp:"UTSA",venue:"a",price:0.93},
-  {fav:"Alabama",opp:"South Florida",venue:"a",price:0.91},
-  {fav:"Penn State",opp:"Kent State",venue:"a",price:0.97},
-  {fav:"Clemson",opp:"Appalachian State",venue:"a",price:0.85},
-  {fav:"Notre Dame",opp:"Purdue",venue:"a",price:0.93},
-  {fav:"Oregon",opp:"Temple",venue:"a",price:0.96},
-  {fav:"Michigan",opp:"Akron",venue:"a",price:0.94},
-  {fav:"USC",opp:"Nevada",venue:"a",price:0.90},
+  {fav:"Georgia",opp:"Western Kentucky",venue:"a",price:0.99},
+  {fav:"Virginia Tech",opp:"Old Dominion",venue:"a",price:0.99},
+  {fav:"Kansas State",opp:"Wake Forest",venue:"a",price:0.95},
+  {fav:"Penn State",opp:"Temple",venue:"a",price:0.91},
+  {fav:"Texas A&M",opp:"Arizona State",venue:"a",price:0.87},
+  {fav:"Wake Forest",opp:"Purdue",venue:"b",price:0.82},
+  {fav:"Army",opp:"South Florida",venue:"a",price:0.70},
+  {fav:"East Carolina",opp:"Appalachian State",venue:"a",price:0.52},
+  {fav:"Michigan",opp:"Oklahoma",venue:"a",price:0.52},
 ];
 sampleGames.forEach(g=>addGame(g.fav,g.opp,g.venue,g.price));
 
