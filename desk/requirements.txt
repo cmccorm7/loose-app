@@ -1,0 +1,8 @@
+# The trading engine in ../trading needs nothing but the standard library.
+# These are for the desktop hub's local server.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+
+# Windows has no system timezone database.
+tzdata; platform_system == "Windows"

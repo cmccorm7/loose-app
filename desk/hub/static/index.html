@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YM Desk</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>📊</text></svg>">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">YM</span>
+      <span class="brand-name">Desk</span>
+    </div>
+    <button class="nav-item is-active" data-view="dashboard">Dashboard</button>
+    <button class="nav-item" data-view="statements">Statements<span class="badge" id="nav-statement-count"></span></button>
+    <button class="nav-item" data-view="analysis">Analysis</button>
+    <button class="nav-item" data-view="behavior">Behavior<span class="badge badge-alert" id="nav-finding-count"></span></button>
+    <button class="nav-item" data-view="sizing">Position size</button>
+    <button class="nav-item" data-view="settings">Settings</button>
+    <div class="sidebar-foot">
+      <button id="theme-toggle" class="ghost-button" title="Switch theme">Theme</button>
+      <span class="muted small" id="engine-version"></span>
+    </div>
+  </nav>
+
+  <main class="content">
+    <!-- Dashboard -->
+    <section class="view is-active" id="view-dashboard">
+      <header class="view-head">
+        <h1>Dashboard</h1>
+        <p class="muted" id="dashboard-period">No trades yet.</p>
+      </header>
+      <div id="dashboard-empty" class="empty-state">
+        <h2>Nothing imported yet</h2>
+        <p>Upload a trading statement and the analysis appears here. A NinjaTrader
+           trade export works as-is; so does any CSV with an entry time, a
+           direction and an entry price.</p>
+        <button class="primary-button" data-goto="statements">Upload a statement</button>
+      </div>
+      <div id="dashboard-body" hidden>
+        <div class="tile-row" id="stat-tiles"></div>
+        <figure class="card">
+          <figcaption>
+            <h2>Equity curve</h2>
+            <p class="muted small">Closed trades, starting from your configured account size.</p>
+          </figcaption>
+          <div class="chart" id="equity-chart"></div>
+        </figure>
+        <figure class="card">
+          <figcaption>
+            <h2>Profit and loss by day</h2>
+            <p class="muted small">Blue is a winning day, red a losing one.</p>
+          </figcaption>
+          <div class="chart" id="daily-chart"></div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Statements -->
+    <section class="view" id="view-statements">
+      <header class="view-head">
+        <h1>Statements</h1>
+        <p class="muted">Nothing reaches your journal until you have seen what the
+           parser made of it.</p>
+      </header>
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".csv,.txt,.tsv" hidden multiple>
+        <p><strong>Drop a statement here</strong> or <button class="link-button" id="browse-button">choose a file</button></p>
+        <p class="muted small">CSV or text. NinjaTrader trade exports, or any trade
+           list with entry time, direction and entry price.</p>
+      </div>
+      <div id="statement-list"></div>
+    </section>
+
+    <!-- Analysis -->
+    <section class="view" id="view-analysis">
+      <header class="view-head">
+        <h1>Analysis</h1>
+        <p class="muted">Where the money actually comes from.</p>
+      </header>
+      <div class="filter-row">
+        <label>Group by
+          <select id="breakdown-by">
+            <option value="hour">Hour of day</option>
+            <option value="weekday">Weekday</option>
+            <option value="setup">Setup</option>
+            <option value="direction">Direction</option>
+            <option value="session">Session</option>
+            <option value="exit_reason">Exit reason</option>
+            <option value="month">Month</option>
+            <option value="contracts">Size</option>
+          </select>
+        </label>
+      </div>
+      <figure class="card">
+        <figcaption>
+          <h2 id="breakdown-title">Expectancy by hour</h2>
+          <p class="muted small">Average R per trade in each bucket. Blue is positive, red negative.</p>
+        </figcaption>
+        <div class="chart" id="breakdown-chart"></div>
+      </figure>
+      <div class="card">
+        <h2>Detail</h2>
+        <div class="table-wrap"><table id="breakdown-table"></table></div>
+      </div>
+      <div class="card">
+        <h2>Recent trades</h2>
+        <div class="table-wrap scroll"><table id="trades-table"></table></div>
+      </div>
+    </section>
+
+    <!-- Behavior -->
+    <section class="view" id="view-behavior">
+      <header class="view-head">
+        <h1>Behavior</h1>
+        <p class="muted">Patterns in how you trade, not what you trade.</p>
+      </header>
+      <div id="behavior-body"></div>
+    </section>
+
+    <!-- Sizing -->
+    <section class="view" id="view-sizing">
+      <header class="view-head">
+        <h1>Position size</h1>
+        <p class="muted">You choose what the trade may cost. The stop decides how many contracts that buys.</p>
+      </header>
+      <div class="card narrow">
+        <form id="size-form" class="form-grid">
+          <label>Symbol<select id="size-symbol"></select></label>
+          <label>Account equity<input type="number" id="size-equity" step="100"></label>
+          <label>Entry<input type="number" id="size-entry" step="1" required></label>
+          <label>Stop<input type="number" id="size-stop" step="1" required></label>
+          <label>Target <span class="muted small">(optional)</span><input type="number" id="size-target" step="1"></label>
+          <button class="primary-button" type="submit">Check this trade</button>
+        </form>
+        <div id="size-result"></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section class="view" id="view-settings">
+      <header class="view-head">
+        <h1>Settings</h1>
+        <p class="muted">Stored in your data folder, alongside the journal.</p>
+      </header>
+      <div class="card narrow">
+        <form id="settings-form" class="form-grid">
+          <label>Default symbol<select id="set-symbol"></select></label>
+          <label>Account equity<input type="number" id="set-equity" step="100"></label>
+          <label>Risk per trade %<input type="number" id="set-risk" step="0.1"></label>
+          <label>Daily loss limit %<input type="number" id="set-daily" step="0.1"></label>
+          <label>Max drawdown %<input type="number" id="set-drawdown" step="0.5"></label>
+          <label>Statement timezone<input type="text" id="set-tz" placeholder="America/New_York"></label>
+          <label>Default stop distance (points)
+            <input type="number" id="set-stop" step="1" placeholder="leave blank for none">
+            <span class="hint">Statements rarely record your stop. Without one, trades have no R-multiple.</span>
+          </label>
+          <button class="primary-button" type="submit">Save</button>
+        </form>
+        <div id="settings-result"></div>
+      </div>
+      <div class="card narrow">
+        <h2>Data folder</h2>
+        <p class="muted small" id="data-folder">—</p>
+        <p class="muted small">Your journal, uploaded statements and settings all live
+           here. Nothing is sent anywhere.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header><h2 id="modal-title">Preview</h2>
+      <button class="ghost-button" id="modal-close" aria-label="Close">×</button>
+    </header>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="tooltip" class="tooltip" hidden></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Never commit a real journal or a real statement.
+*.db
+*.db-journal
+uploads/
+statements.json
+settings.json

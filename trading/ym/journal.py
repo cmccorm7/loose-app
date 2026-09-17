@@ -297,172 +297,39 @@ class Journal:
         default_stop_points: float | None = None,
         source: str = "csv",
     ) -> tuple[int, list[str]]:
-        """Import trades from a CSV export.
+        """Parse a CSV export and record every trade it yields.
 
-        Understands NinjaTrader 8's Trade Performance grid export (``Entry
-        time``, ``Market pos.``, ``MAE``, ...) as well as the backtester's own
-        trade CSV. Returns ``(imported, warnings)``.
-
-        NinjaTrader does not export your stop, so R-multiples are unavailable
-        for imported trades unless you pass ``default_stop_points`` or fill in
-        ``stop_price`` afterwards.
+        Returns ``(imported, warnings)``. To see what a file contains *before*
+        writing any of it, call :func:`parse_trade_csv` directly -- a statement
+        that turns out to be misread is much easier to reject than to unpick
+        from the journal afterwards.
         """
-        path = Path(path)
-        zone = exchange_tz(tz) if tz else self.session.tz
-        warnings: list[str] = []
-        imported = 0
+        trades, warnings = parse_trade_csv(
+            path,
+            symbol=symbol,
+            tz=tz,
+            excursion_unit=excursion_unit,
+            default_stop_points=default_stop_points,
+            session=self.session,
+        )
+        for trade in trades:
+            self.record(trade, source=source)
+        return len(trades), warnings
 
-        with open(path, "r", encoding="utf-8-sig", newline="") as handle:
-            sample = handle.read(4096)
-            handle.seek(0)
-            delimiter = ";" if sample.count(";") > sample.count(",") else ","
-            reader = csv.DictReader(handle, delimiter=delimiter)
-            if not reader.fieldnames:
-                raise ValueError(f"{path.name}: no header row found")
-            lookup = {
-                (name or "").strip().lower().rstrip("."): name
-                for name in reader.fieldnames
-            }
+    def delete_by_source(self, source: str) -> int:
+        """Remove every trade that came from one import. Returns the count."""
+        cursor = self.connection.execute(
+            "DELETE FROM trades WHERE source = ?", (source,)
+        )
+        self.connection.commit()
+        return cursor.rowcount
 
-            def pick(*candidates: str) -> str | None:
-                for candidate in candidates:
-                    key = candidate.strip().lower().rstrip(".")
-                    if key in lookup:
-                        return lookup[key]
-                return None
-
-            col_entry_time = pick("entry time", "entry_time", "datetime", "date")
-            col_exit_time = pick("exit time", "exit_time")
-            col_direction = pick("market pos", "market position", "direction", "side")
-            col_quantity = pick("quantity", "contracts", "qty", "size")
-            col_entry = pick("entry price", "entry_price")
-            col_exit = pick("exit price", "exit_price")
-            col_symbol = pick("instrument", "symbol")
-            col_commission = pick("commission", "commissions", "fees")
-            col_mae = pick("mae", "mae_points")
-            col_mfe = pick("mfe", "mfe_points")
-            col_stop = pick("stop_price", "stop", "stop price")
-            col_target = pick("target_price", "target", "target price")
-            col_setup = pick("setup", "strategy")
-            col_setup_alt = pick("entry name", "signal")
-            col_reason = pick("exit_reason", "exit name", "exit reason")
-            col_notes = pick("notes", "comment")
-
-            missing = [
-                label
-                for label, column in (
-                    ("entry time", col_entry_time),
-                    ("direction", col_direction),
-                    ("entry price", col_entry),
-                )
-                if column is None
-            ]
-            if missing:
-                raise ValueError(
-                    f"{path.name}: missing required column(s) {missing}. "
-                    f"Found: {reader.fieldnames}"
-                )
-
-            def number(row: dict, column: str | None) -> float | None:
-                if not column:
-                    return None
-                raw = (row.get(column) or "").strip()
-                if not raw:
-                    return None
-                cleaned = (
-                    raw.replace("$", "").replace(",", "")
-                    .replace("(", "-").replace(")", "")
-                )
-                try:
-                    return float(cleaned)
-                except ValueError:
-                    return None
-
-            def timestamp(raw: str | None) -> datetime | None:
-                if not raw:
-                    return None
-                text = raw.strip()
-                for fmt in (
-                    "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%m/%d/%Y %H:%M:%S",
-                    "%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y %H:%M", "%Y%m%d %H%M%S",
-                ):
-                    try:
-                        return datetime.strptime(text, fmt).replace(tzinfo=zone)
-                    except ValueError:
-                        continue
-                try:
-                    parsed = datetime.fromisoformat(text)
-                    return parsed if parsed.tzinfo else parsed.replace(tzinfo=zone)
-                except ValueError:
-                    return None
-
-            for line_number, row in enumerate(reader, start=2):
-                entry_time = timestamp(row.get(col_entry_time))
-                if entry_time is None:
-                    warnings.append(f"line {line_number}: unreadable entry time")
-                    continue
-                try:
-                    direction = Direction.parse(row[col_direction])
-                except ValueError:
-                    warnings.append(f"line {line_number}: unreadable direction")
-                    continue
-                entry_price = number(row, col_entry)
-                if entry_price is None:
-                    warnings.append(f"line {line_number}: unreadable entry price")
-                    continue
-
-                raw_symbol = (row.get(col_symbol) or symbol or "YM").strip()
-                try:
-                    instrument = get_instrument(raw_symbol)
-                except KeyError:
-                    instrument = get_instrument(symbol or "YM")
-                    warnings.append(
-                        f"line {line_number}: unknown instrument {raw_symbol!r}, "
-                        f"treated as {instrument.symbol}"
-                    )
-
-                contracts = int(number(row, col_quantity) or 1)
-                stop_price = number(row, col_stop)
-                if stop_price is None and default_stop_points:
-                    stop_price = entry_price - direction.sign * abs(default_stop_points)
-
-                mae = abs(number(row, col_mae) or 0.0)
-                mfe = abs(number(row, col_mfe) or 0.0)
-                if excursion_unit == "currency" and contracts > 0:
-                    divisor = instrument.point_value * contracts
-                    mae, mfe = mae / divisor, mfe / divisor
-
-                reason_text = (row.get(col_reason) or "").strip().lower()
-                try:
-                    exit_reason = ExitReason(reason_text) if reason_text else None
-                except ValueError:
-                    exit_reason = ExitReason.MANUAL
-
-                trade = Trade(
-                    symbol=instrument.symbol,
-                    direction=direction,
-                    entry_time=entry_time,
-                    entry_price=entry_price,
-                    contracts=contracts,
-                    point_value=instrument.point_value,
-                    stop_price=stop_price,
-                    target_price=number(row, col_target),
-                    exit_time=timestamp(row.get(col_exit_time)) if col_exit_time else None,
-                    exit_price=number(row, col_exit),
-                    commission=abs(number(row, col_commission) or 0.0),
-                    mae_points=mae,
-                    mfe_points=mfe,
-                    exit_reason=exit_reason,
-                    setup=(
-                        (row.get(col_setup) or "").strip()
-                        or (row.get(col_setup_alt) or "").strip()
-                    ),
-                    notes=(row.get(col_notes) or "").strip(),
-                )
-                self.record(trade, source=source)
-                imported += 1
-
-        return imported, warnings
+    def sources(self) -> dict[str, int]:
+        """How many trades came from each source."""
+        rows = self.connection.execute(
+            "SELECT source, COUNT(*) FROM trades GROUP BY source ORDER BY source"
+        ).fetchall()
+        return {row[0]: row[1] for row in rows}
 
     def export_csv(self, path: str | Path, **filters) -> int:
         trades = self.trades(**filters)
@@ -491,3 +358,184 @@ class Journal:
                     ",".join(trade.tags), trade.notes,
                 ])
         return len(trades)
+
+
+def parse_trade_csv(
+    path: str | Path,
+    symbol: str | None = None,
+    tz: str | None = None,
+    excursion_unit: str = "currency",
+    default_stop_points: float | None = None,
+    session: SessionSpec = DEFAULT_SESSION,
+) -> tuple[list[Trade], list[str]]:
+    """Read trades out of a CSV export without storing anything.
+
+    Understands NinjaTrader 8's Trade Performance grid export (``Entry time``,
+    ``Market pos.``, ``MAE``, ...) as well as the backtester's own trade CSV.
+    Returns ``(trades, warnings)``; rows it cannot read become warnings rather
+    than exceptions, so one bad line does not cost you the file.
+
+    NinjaTrader does not export your stop, so R-multiples are unavailable for
+    imported trades unless you pass ``default_stop_points`` or fill in
+    ``stop_price`` afterwards.
+    """
+    path = Path(path)
+    zone = exchange_tz(tz) if tz else session.tz
+    warnings: list[str] = []
+    trades: list[Trade] = []
+
+    with open(path, "r", encoding="utf-8-sig", newline="") as handle:
+        sample = handle.read(4096)
+        handle.seek(0)
+        delimiter = ";" if sample.count(";") > sample.count(",") else ","
+        reader = csv.DictReader(handle, delimiter=delimiter)
+        if not reader.fieldnames:
+            raise ValueError(f"{path.name}: no header row found")
+        lookup = {
+            (name or "").strip().lower().rstrip("."): name
+            for name in reader.fieldnames
+        }
+
+        def pick(*candidates: str) -> str | None:
+            for candidate in candidates:
+                key = candidate.strip().lower().rstrip(".")
+                if key in lookup:
+                    return lookup[key]
+            return None
+
+        columns = {
+            "entry_time": pick("entry time", "entry_time", "datetime", "date"),
+            "exit_time": pick("exit time", "exit_time"),
+            "direction": pick("market pos", "market position", "direction", "side"),
+            "quantity": pick("quantity", "contracts", "qty", "size"),
+            "entry": pick("entry price", "entry_price"),
+            "exit": pick("exit price", "exit_price"),
+            "symbol": pick("instrument", "symbol"),
+            "commission": pick("commission", "commissions", "fees"),
+            "mae": pick("mae", "mae_points"),
+            "mfe": pick("mfe", "mfe_points"),
+            "stop": pick("stop_price", "stop", "stop price"),
+            "target": pick("target_price", "target", "target price"),
+            "setup": pick("setup", "strategy"),
+            "setup_alt": pick("entry name", "signal"),
+            "reason": pick("exit_reason", "exit name", "exit reason"),
+            "notes": pick("notes", "comment"),
+        }
+
+        missing = [
+            label
+            for label, key in (
+                ("entry time", "entry_time"),
+                ("direction", "direction"),
+                ("entry price", "entry"),
+            )
+            if columns[key] is None
+        ]
+        if missing:
+            raise ValueError(
+                f"{path.name}: missing required column(s) {missing}. "
+                f"Found: {reader.fieldnames}"
+            )
+
+        def number(row: dict, key: str) -> float | None:
+            column = columns[key]
+            if not column:
+                return None
+            raw = (row.get(column) or "").strip()
+            if not raw:
+                return None
+            cleaned = (
+                raw.replace("$", "").replace(",", "")
+                .replace("(", "-").replace(")", "")
+            )
+            try:
+                return float(cleaned)
+            except ValueError:
+                return None
+
+        def text(row: dict, key: str) -> str:
+            column = columns[key]
+            return (row.get(column) or "").strip() if column else ""
+
+        def timestamp(raw: str | None) -> datetime | None:
+            if not raw:
+                return None
+            value = raw.strip()
+            for fmt in (
+                "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%m/%d/%Y %H:%M:%S",
+                "%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y %H:%M", "%Y%m%d %H%M%S",
+            ):
+                try:
+                    return datetime.strptime(value, fmt).replace(tzinfo=zone)
+                except ValueError:
+                    continue
+            try:
+                parsed = datetime.fromisoformat(value)
+                return parsed if parsed.tzinfo else parsed.replace(tzinfo=zone)
+            except ValueError:
+                return None
+
+        for line_number, row in enumerate(reader, start=2):
+            entry_time = timestamp(text(row, "entry_time"))
+            if entry_time is None:
+                warnings.append(f"line {line_number}: unreadable entry time")
+                continue
+            try:
+                direction = Direction.parse(text(row, "direction"))
+            except ValueError:
+                warnings.append(f"line {line_number}: unreadable direction")
+                continue
+            entry_price = number(row, "entry")
+            if entry_price is None:
+                warnings.append(f"line {line_number}: unreadable entry price")
+                continue
+
+            raw_symbol = text(row, "symbol") or symbol or "YM"
+            try:
+                instrument = get_instrument(raw_symbol)
+            except KeyError:
+                instrument = get_instrument(symbol or "YM")
+                warnings.append(
+                    f"line {line_number}: unknown instrument {raw_symbol!r}, "
+                    f"treated as {instrument.symbol}"
+                )
+
+            contracts = int(number(row, "quantity") or 1)
+            stop_price = number(row, "stop")
+            if stop_price is None and default_stop_points:
+                stop_price = entry_price - direction.sign * abs(default_stop_points)
+
+            mae = abs(number(row, "mae") or 0.0)
+            mfe = abs(number(row, "mfe") or 0.0)
+            if excursion_unit == "currency" and contracts > 0:
+                divisor = instrument.point_value * contracts
+                mae, mfe = mae / divisor, mfe / divisor
+
+            reason_text = text(row, "reason").lower()
+            try:
+                exit_reason = ExitReason(reason_text) if reason_text else None
+            except ValueError:
+                exit_reason = ExitReason.MANUAL
+
+            trades.append(
+                Trade(
+                    symbol=instrument.symbol,
+                    direction=direction,
+                    entry_time=entry_time,
+                    entry_price=entry_price,
+                    contracts=contracts,
+                    point_value=instrument.point_value,
+                    stop_price=stop_price,
+                    target_price=number(row, "target"),
+                    exit_time=timestamp(text(row, "exit_time")),
+                    exit_price=number(row, "exit"),
+                    commission=abs(number(row, "commission") or 0.0),
+                    mae_points=mae,
+                    mfe_points=mfe,
+                    exit_reason=exit_reason,
+                    setup=text(row, "setup") or text(row, "setup_alt"),
+                    notes=text(row, "notes"),
+                )
+            )
+
+    return trades, warnings

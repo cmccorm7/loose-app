@@ -666,8 +666,9 @@ def detect_overtrading(
             f"${quiet_mean:,.2f} ({quiet_n} days)."
         ),
         suggestion=(
-            f"Cap the day at {threshold_count - 1} trades. Volume is not the "
-            f"same as opportunity -- the extra trades are the ones you go "
+            f"Cap the day at {threshold_count - 1} "
+            f"{'trade' if threshold_count - 1 == 1 else 'trades'}. Volume is not "
+            f"the same as opportunity -- the extra trades are the ones you go "
             f"looking for once the good ones are gone."
         ),
         sample=busy_n,
