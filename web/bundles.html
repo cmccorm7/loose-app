@@ -141,6 +141,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .panel-title {
   font-family: 'Oswald', sans-serif;
@@ -157,17 +159,19 @@ body {
 }
 .panel-body { padding: 14px 16px; }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+.add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  padding: 12px 16px;
 }
-.form-group { display: flex; flex-direction: column; gap: 3px; }
-.form-group.full { grid-column: 1 / -1; }
-.form-label {
+.add-field { display: flex; flex-direction: column; gap: 3px; }
+.add-field.grow { flex: 1; min-width: 120px; }
+.add-field-label {
   font-family: 'Oswald', sans-serif;
   font-weight: 500;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -179,7 +183,7 @@ body {
   background: var(--bg-card);
   color: var(--text);
   font-family: 'Source Sans 3', sans-serif;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   appearance: none;
 }
 .form-select {
@@ -195,75 +199,116 @@ body {
 .form-input { font-variant-numeric: tabular-nums; }
 
 .btn {
-  padding: 8px 20px;
+  padding: 7px 16px;
   border: none;
   border-radius: 5px;
   font-family: 'Oswald', sans-serif;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   cursor: pointer;
   transition: background 0.15s;
+  white-space: nowrap;
 }
 .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .btn-add { background: var(--green); color: #fff; }
 .btn-add:hover { background: var(--green-light); }
-.btn-clear { background: var(--border); color: var(--text-secondary); font-size: 0.75rem; padding: 5px 12px; }
-.btn-clear:hover { background: var(--text-muted); color: var(--bg); }
+.btn-sm { font-size: 0.68rem; padding: 4px 10px; }
+.btn-muted { background: var(--border); color: var(--text-secondary); }
+.btn-muted:hover { background: var(--text-muted); color: var(--bg); }
+.btn-gold { background: var(--gold-dim); color: var(--gold); }
+.btn-gold:hover { background: var(--gold); color: var(--bg); }
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+.filter-count {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
 
 .games-wrap { overflow-x: auto; }
-.games-table {
+.slate-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
 }
-.games-table th {
+.slate-table th {
   font-family: 'Oswald', sans-serif;
   font-weight: 500;
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
   text-align: left;
-  padding: 8px 6px 6px;
+  padding: 8px 5px 6px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
-.games-table th.r { text-align: right; }
-.games-table td {
-  padding: 7px 6px;
+.slate-table th.r { text-align: right; }
+.slate-table th.c { text-align: center; }
+.slate-table td {
+  padding: 6px 5px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
-.games-table tr:last-child td { border-bottom: none; }
-.games-table td.r { text-align: right; }
-.games-table td.team-name {
+.slate-table tr:last-child td { border-bottom: none; }
+.slate-table td.r { text-align: right; }
+.slate-table td.c { text-align: center; }
+.slate-table td.team-name {
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
 }
-.games-table td.vs-cell {
+.slate-table td.vs-cell {
   color: var(--text-muted);
-  font-size: 0.75rem;
-  padding: 7px 2px;
+  font-size: 0.72rem;
+  padding: 6px 2px;
 }
-.edge-pos { color: var(--green-light); font-weight: 600; }
-.edge-neg { color: var(--red-light); font-weight: 600; }
-.edge-zero { color: var(--text-muted); }
+.row-excluded { opacity: 0.35; }
+
+.toggle-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  text-transform: uppercase;
+  background: var(--bg);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.toggle-pill.active {
+  background: var(--green-dim);
+  color: var(--green-light);
+  border-color: var(--green);
+}
 
 .tier {
   display: inline-block;
   font-family: 'Oswald', sans-serif;
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 2px;
   vertical-align: middle;
-  margin-left: 4px;
+  margin-left: 3px;
   line-height: 1.4;
 }
 .tier-1 { background: var(--t1-bg); color: var(--t1-fg); }
@@ -271,6 +316,25 @@ body {
 .tier-3 { background: var(--t3-bg); color: var(--t3-fg); }
 .tier-4 { background: var(--t4-bg); color: var(--t4-fg); }
 .tier-5 { background: var(--t5-bg); color: var(--t5-fg); }
+
+.price-cell-input {
+  width: 58px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  appearance: none;
+}
+.price-cell-input:focus { outline: 2px solid var(--gold-dim); outline-offset: 1px; }
+
+.edge-pos { color: var(--green-light); font-weight: 600; }
+.edge-neg { color: var(--red-light); font-weight: 600; }
+.edge-zero { color: var(--text-muted); }
 
 .rm-btn {
   background: none;
@@ -298,6 +362,7 @@ body {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   font-size: 0.82rem;
+  flex-wrap: wrap;
 }
 .settings-row .form-input { width: 90px; padding: 5px 8px; font-size: 0.82rem; }
 
@@ -311,25 +376,24 @@ body {
 .scenario-table th {
   font-family: 'Oswald', sans-serif;
   font-weight: 500;
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
   text-align: left;
-  padding: 8px 6px 6px;
+  padding: 8px 5px 6px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 .scenario-table th.r { text-align: right; }
 .scenario-table td {
-  padding: 6px;
+  padding: 6px 5px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 .scenario-table tr:last-child td { border-bottom: none; }
 .scenario-table td.r { text-align: right; }
 .scenario-row-profit { background: var(--green-dim); }
-.scenario-row-loss {}
 
 .prob-bar-track {
   width: 100%;
@@ -337,12 +401,9 @@ body {
   background: var(--bg);
   border-radius: 3px;
   overflow: hidden;
-  min-width: 60px;
+  min-width: 50px;
 }
-.prob-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-}
+.prob-bar-fill { height: 100%; border-radius: 3px; }
 .pnl-pos { color: var(--green-light); font-weight: 700; }
 .pnl-neg { color: var(--red-light); font-weight: 700; }
 
@@ -354,21 +415,9 @@ body {
   margin-bottom: 16px;
 }
 .verdict-box strong { font-weight: 700; }
-.verdict-positive {
-  background: var(--green-dim);
-  border: 1px solid var(--green);
-  color: var(--text);
-}
-.verdict-negative {
-  background: var(--red-dim);
-  border: 1px solid var(--red);
-  color: var(--text);
-}
-.verdict-neutral {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-}
+.verdict-positive { background: var(--green-dim); border: 1px solid var(--green); color: var(--text); }
+.verdict-negative { background: var(--red-dim); border: 1px solid var(--red); color: var(--text); }
+.verdict-neutral { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); }
 
 .dashboard {
   display: grid;
@@ -410,18 +459,6 @@ body {
 .sv-teal { color: var(--teal); }
 .sv-text { color: var(--text); }
 
-.tier-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  padding: 8px 16px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-}
-.tier-legend .tier { vertical-align: baseline; margin-left: 0; margin-right: 2px; }
-
 .footer-note {
   margin-top: 16px;
   font-size: 0.72rem;
@@ -432,11 +469,11 @@ body {
 }
 
 @media (max-width: 540px) {
-  .form-grid { grid-template-columns: 1fr; }
+  .add-row { flex-direction: column; align-items: stretch; }
+  .add-field.grow { min-width: 0; }
   .dashboard { grid-template-columns: repeat(2, 1fr); }
-  .games-table, .scenario-table { font-size: 0.78rem; }
-  .settings-row { flex-wrap: wrap; }
-  .tier-legend { font-size: 0.66rem; }
+  .slate-table, .scenario-table { font-size: 0.78rem; }
+  .filter-bar { gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .btn { transition: none; }
@@ -446,76 +483,71 @@ body {
 <div class="app">
   <div class="header">
     <h1>CFB Risk Bundles</h1>
-    <p>Pool High-Confidence Favorites &middot; Analyze Bundle Risk</p>
+    <p>Saturday Slate &middot; Price Games &middot; Analyze Your Bundle</p>
   </div>
 
   <div class="explainer">
-    <strong>The strategy:</strong> Bundle several heavy favorites from Robinhood event contracts into one
-    &ldquo;pool.&rdquo; Each individual bet risks a lot for a small return, but if you can find games where
-    your model&rsquo;s true probability exceeds the market price, the bundle&rsquo;s expected value turns positive.
-    This tool runs the exact combinatorics so you see the probability of every outcome&mdash;and whether
-    the math actually works before you put money down.
+    <strong>How to use:</strong> Open Robinhood &rarr; Event Contracts &rarr; College Football.
+    For each game listed, add the matchup and the current &ldquo;Yes&rdquo; price below.
+    The tool calculates your model edge on each game. Toggle games into your bundle,
+    then see the exact probability-weighted risk analysis.
   </div>
 
   <div class="panel">
     <div class="panel-head">
-      <span class="panel-title">Add to Bundle</span>
+      <span class="panel-title">Add Game from Robinhood</span>
     </div>
-    <div class="panel-body">
-      <div class="form-grid">
-        <div class="form-group">
-          <span class="form-label">Favorite</span>
-          <select class="form-select" id="betTeam"></select>
-        </div>
-        <div class="form-group">
-          <span class="form-label">Opponent</span>
-          <select class="form-select" id="oppTeam"></select>
-        </div>
-        <div class="form-group">
-          <span class="form-label">Venue</span>
-          <select class="form-select" id="venueSelect">
-            <option value="a">Favorite Home</option>
-            <option value="b">Opponent Home</option>
-            <option value="neutral">Neutral Site</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <span class="form-label">Contract Price ($)</span>
-          <input type="number" class="form-input" id="priceInput" min="0.01" max="0.99" step="0.01" value="0.93" placeholder="0.93">
-        </div>
-        <div class="form-group full" style="align-items:end;">
-          <button class="btn btn-add" id="addBtn">+ Add to Bundle</button>
-        </div>
+    <div class="add-row">
+      <div class="add-field grow">
+        <span class="add-field-label">Favorite</span>
+        <select class="form-select" id="betTeam"></select>
       </div>
+      <div class="add-field grow">
+        <span class="add-field-label">Opponent</span>
+        <select class="form-select" id="oppTeam"></select>
+      </div>
+      <div class="add-field">
+        <span class="add-field-label">RH Price ($)</span>
+        <input type="number" class="form-input" id="priceInput" min="0.01" max="0.99" step="0.01" value="0.93" style="width:72px;">
+      </div>
+      <div class="add-field">
+        <span class="add-field-label">Venue</span>
+        <select class="form-select" id="venueSelect" style="min-width:100px;">
+          <option value="a">Fav Home</option>
+          <option value="b">Opp Home</option>
+          <option value="neutral">Neutral</option>
+        </select>
+      </div>
+      <button class="btn btn-add" id="addBtn">+ Add</button>
     </div>
   </div>
 
   <div class="panel">
     <div class="panel-head">
-      <span class="panel-title">Your Bundle</span>
-      <button class="btn btn-clear" id="clearBtn">Clear All</button>
+      <span class="panel-title">Saturday Slate</span>
+      <span class="panel-meta" id="slateMeta"></span>
     </div>
-    <div class="tier-legend">
-      <span><span class="tier tier-1">ELITE</span> Historic dominance</span>
-      <span><span class="tier tier-2">POWER</span> Strong program</span>
-      <span><span class="tier tier-3">SOLID</span> Competitive</span>
-      <span><span class="tier tier-4">AVG</span> Mid-tier</span>
-      <span><span class="tier tier-5">WEAK</span> Vulnerable</span>
+    <div class="filter-bar" id="filterBar">
+      <button class="btn btn-sm btn-gold" id="selectEdgeBtn">Select +Edge</button>
+      <button class="btn btn-sm btn-muted" id="selectAllBtn">All In</button>
+      <button class="btn btn-sm btn-muted" id="deselectAllBtn">All Out</button>
+      <button class="btn btn-sm btn-muted" id="clearSlateBtn">Clear Slate</button>
+      <span class="filter-count" id="filterCount"></span>
     </div>
     <div class="panel-body" style="padding:0;">
       <div class="games-wrap">
-        <div id="bundleContent"></div>
+        <div id="slateContent"></div>
       </div>
     </div>
   </div>
 
   <div class="panel" id="analysisPanel">
     <div class="panel-head">
-      <span class="panel-title">Risk Analysis</span>
+      <span class="panel-title">Bundle Risk Analysis</span>
       <span class="panel-meta" id="analysisMeta"></span>
     </div>
     <div class="settings-row">
-      <span class="form-label">Bet Per Game ($)</span>
+      <span class="add-field-label">Bet Per Game ($)</span>
       <input type="number" class="form-input" id="betAmountInput" min="1" max="100000" step="1" value="100">
       <span style="font-size:0.76rem;color:var(--text-muted);margin-left:auto;" id="totalInvLabel"></span>
     </div>
@@ -528,8 +560,9 @@ body {
 
   <div class="footer-note">
     Program tiers derived from composite power rating (Elo, offense, defense, efficiency, SOS, record)
-    plus conference strength. Probabilities computed via exact combinatorial enumeration of all possible
-    outcomes (up to 20 games). Robinhood contract prices entered manually.
+    plus conference strength. Win probability via logistic function with home field advantage.
+    Probabilities computed via exact combinatorial enumeration of all 2<sup>N</sup> outcomes (up to 20 games).
+    Prices are entered manually from Robinhood. Update prices inline as they move.
     This is an analysis tool, not financial advice.
   </div>
 </div>
@@ -678,15 +711,9 @@ function norm(v,lo,hi,inv){
   s=Math.max(0,Math.min(100,s));
   return inv?100-s:s;
 }
-function offScore(t){
-  return norm(t[3],...SR.ppg)*.4+norm(t[5],...SR.ypp)*.3+norm(t[8],...SR.td)*.15+norm(t[9],...SR.rz)*.15;
-}
-function defScore(t){
-  return norm(t[4],...SR.papg,true)*.45+norm(t[6],...SR.yppD,true)*.35+norm(t[10],...SR.sk)*.2;
-}
-function effScore(t){
-  return norm(t[7],...SR.to)*.6+norm(t[11],...SR.pen,true)*.4;
-}
+function offScore(t){return norm(t[3],...SR.ppg)*.4+norm(t[5],...SR.ypp)*.3+norm(t[8],...SR.td)*.15+norm(t[9],...SR.rz)*.15;}
+function defScore(t){return norm(t[4],...SR.papg,true)*.45+norm(t[6],...SR.yppD,true)*.35+norm(t[10],...SR.sk)*.2;}
+function effScore(t){return norm(t[7],...SR.to)*.6+norm(t[11],...SR.pen,true)*.4;}
 function powerRating(t){
   const total=t[1]+t[2];
   const wp=total>0?t[1]/total:0.5;
@@ -694,13 +721,12 @@ function powerRating(t){
 }
 function modelPredict(nA,nB,venue){
   const a=R[nA],b=R[nB];
-  let rA=powerRating(a),rB=powerRating(b);
+  const rA=powerRating(a),rB=powerRating(b);
   const homeTeam=venue==='a'?nA:venue==='b'?nB:null;
-  let eA=rA+(homeTeam===nA?HF:0),eB=rB+(homeTeam===nB?HF:0);
+  const eA=rA+(homeTeam===nA?HF:0),eB=rB+(homeTeam===nB?HF:0);
   const pA=1/(1+Math.exp(-(eA-eB)/10));
-  return {pA,pB:1-pA,rA,rB};
+  return {pA,rA,rB};
 }
-
 function programTier(name){
   const t=R[name];
   if(!t) return {tier:5,label:'UNK'};
@@ -716,17 +742,17 @@ function programTier(name){
   return {tier:5,label:'WEAK'};
 }
 
-let bundle=[];
+let slate=[];
 let nextId=1;
 const $=id=>document.getElementById(id);
 
-function saveBundle(){
-  try{localStorage.setItem('cfb-bundles-v1',JSON.stringify(bundle));}catch(e){}
+function saveSlate(){
+  try{localStorage.setItem('cfb-slate-v1',JSON.stringify(slate));}catch(e){}
 }
-function loadBundle(){
+function loadSlate(){
   try{
-    const s=localStorage.getItem('cfb-bundles-v1');
-    if(s){bundle=JSON.parse(s);nextId=bundle.length?Math.max(...bundle.map(g=>g.id))+1:1;return true;}
+    const s=localStorage.getItem('cfb-slate-v1');
+    if(s){slate=JSON.parse(s);nextId=slate.length?Math.max(...slate.map(g=>g.id))+1:1;return true;}
   }catch(e){}
   return false;
 }
@@ -737,22 +763,44 @@ function fillDrop(sel,val){
   teamNames.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
   if(val&&teamNames.includes(val))sel.value=val;
 }
-fillDrop($('betTeam'),'Georgia');
-fillDrop($('oppTeam'),'Kentucky');
+fillDrop($('betTeam'),'Alabama');
+fillDrop($('oppTeam'),'Wisconsin');
+
+function recalcGame(g){
+  const r=modelPredict(g.fav,g.opp,g.venue);
+  g.modelProb=r.pA;
+  g.edge=r.pA-g.price;
+}
 
 function addGame(fav,opp,venue,price){
   if(fav===opp||!R[fav]||!R[opp])return;
   const r=modelPredict(fav,opp,venue);
-  bundle.push({id:nextId++,fav,opp,venue,price,modelProb:r.pA,edge:r.pA-price});
-  saveBundle();render();
+  slate.push({id:nextId++,fav,opp,venue,price,modelProb:r.pA,edge:r.pA-price,included:true});
+  saveSlate();render();
 }
 function removeGame(id){
-  bundle=bundle.filter(g=>g.id!==id);
-  saveBundle();render();
+  slate=slate.filter(g=>g.id!==id);
+  saveSlate();render();
+}
+function toggleGame(id){
+  const g=slate.find(g=>g.id===id);
+  if(g){g.included=!g.included;saveSlate();render();}
+}
+function updatePrice(id,newPrice){
+  const g=slate.find(g=>g.id===id);
+  if(g&&!isNaN(newPrice)&&newPrice>0&&newPrice<1){
+    g.price=newPrice;
+    g.edge=g.modelProb-newPrice;
+    saveSlate();renderAnalysis();
+  }
 }
 
-function analyzeBundle(bet){
-  const n=bundle.length;
+function selectEdge(){slate.forEach(g=>{g.included=g.edge>0.005;});saveSlate();render();}
+function selectAll(){slate.forEach(g=>{g.included=true;});saveSlate();render();}
+function deselectAll(){slate.forEach(g=>{g.included=false;});saveSlate();render();}
+
+function analyzeBundle(games,bet){
+  const n=games.length;
   if(n===0||n>20) return null;
   const total=1<<n;
   const byK=[];
@@ -762,12 +810,12 @@ function analyzeBundle(bet){
     let p=1,pnl=0,ups=0;
     for(let i=0;i<n;i++){
       if(mask&(1<<i)){
-        p*=(1-bundle[i].modelProb);
+        p*=(1-games[i].modelProb);
         pnl-=bet;
         ups++;
       }else{
-        p*=bundle[i].modelProb;
-        pnl+=bet*(1-bundle[i].price)/bundle[i].price;
+        p*=games[i].modelProb;
+        pnl+=bet*(1-games[i].price)/games[i].price;
       }
     }
     byK[ups].prob+=p;
@@ -785,31 +833,35 @@ function analyzeBundle(bet){
   return {byK,ev,probProfit,totalInvested:n*bet};
 }
 
-function render(){
-  renderBundle();
-  renderAnalysis();
-}
+function render(){renderSlate();renderAnalysis();}
 
-function renderBundle(){
-  const el=$('bundleContent');
-  if(bundle.length===0){
-    el.innerHTML='<div class="no-games">No games in bundle. Add matchups above.</div>';
+function renderSlate(){
+  const el=$('slateContent');
+  const included=slate.filter(g=>g.included).length;
+  $('slateMeta').textContent=slate.length>0?`${slate.length} game${slate.length>1?'s':''}`:'' ;
+  $('filterCount').textContent=slate.length>0?`${included} of ${slate.length} in bundle`:'';
+  $('filterBar').hidden=slate.length===0;
+
+  if(slate.length===0){
+    el.innerHTML='<div class="no-games">No games yet. Add matchups from Robinhood above.</div>';
     return;
   }
-  let html='<table class="games-table"><thead><tr>';
-  html+='<th>Favorite</th><th></th><th>Opponent</th>';
-  html+='<th class="r">Price</th><th class="r">Model</th><th class="r">Edge</th><th></th>';
+  let html='<table class="slate-table"><thead><tr>';
+  html+='<th class="c">In</th><th>Favorite</th><th></th><th>Opponent</th>';
+  html+='<th class="r">RH Price</th><th class="r">Model</th><th class="r">Edge</th><th></th>';
   html+='</tr></thead><tbody>';
-  for(const g of bundle){
-    const ft=programTier(g.fav);
-    const ot=programTier(g.opp);
+  for(const g of slate){
+    const ft=programTier(g.fav),ot=programTier(g.opp);
     const edgeCls=g.edge>0.005?'edge-pos':g.edge<-0.005?'edge-neg':'edge-zero';
     const edgeSign=g.edge>0?'+':'';
-    html+=`<tr>
+    const rowCls=g.included?'':'row-excluded';
+    const pillCls=g.included?'toggle-pill active':'toggle-pill';
+    html+=`<tr class="${rowCls}">
+      <td class="c"><button class="${pillCls}" onclick="toggleGame(${g.id})">${g.included?'IN':'OUT'}</button></td>
       <td class="team-name">${g.fav}<span class="tier tier-${ft.tier}">${ft.label}</span></td>
       <td class="vs-cell">vs</td>
       <td>${g.opp}<span class="tier tier-${ot.tier}">${ot.label}</span></td>
-      <td class="r">$${g.price.toFixed(2)}</td>
+      <td class="r"><input type="number" class="price-cell-input" value="${g.price.toFixed(2)}" min="0.01" max="0.99" step="0.01" onchange="updatePrice(${g.id},parseFloat(this.value))" aria-label="Price"></td>
       <td class="r">${(g.modelProb*100).toFixed(1)}%</td>
       <td class="r ${edgeCls}">${edgeSign}${(g.edge*100).toFixed(1)}%</td>
       <td><button class="rm-btn" onclick="removeGame(${g.id})" aria-label="Remove">&times;</button></td>
@@ -821,66 +873,64 @@ function renderBundle(){
 
 function renderAnalysis(){
   const bet=parseFloat($('betAmountInput').value)||100;
-  const n=bundle.length;
+  const selected=slate.filter(g=>g.included);
+  const n=selected.length;
   $('totalInvLabel').textContent=n>0?`Total: $${(n*bet).toLocaleString()}`:'';
-  $('analysisMeta').textContent=n>0?`${n} game${n>1?'s':''} · $${bet}/game`:'';
+  $('analysisMeta').textContent=n>0?`${n} game${n>1?'s':''} selected · $${bet}/game`:'';
 
   if(n===0){
     $('verdictBox').innerHTML='';
-    $('scenarioContent').innerHTML='<div class="no-games">Add games to your bundle to see risk analysis.</div>';
+    $('scenarioContent').innerHTML='<div class="no-games">Toggle games to &ldquo;IN&rdquo; above to see risk analysis.</div>';
     $('dashboard').innerHTML='';
     return;
   }
   if(n>20){
     $('verdictBox').innerHTML='';
-    $('scenarioContent').innerHTML='<div class="no-games">Bundle too large for exact analysis. Max 20 games.</div>';
+    $('scenarioContent').innerHTML='<div class="no-games">Max 20 games for exact analysis. Deselect some games.</div>';
     $('dashboard').innerHTML='';
     return;
   }
 
-  const a=analyzeBundle(bet);
+  const a=analyzeBundle(selected,bet);
   const sign=v=>v>=0?'+':'';
   const pnlCls=v=>v>=0?'pnl-pos':'pnl-neg';
   const svCls=v=>v>=0?'sv-green':'sv-red';
 
-  // Find breakeven: max upsets where expected P&L is still positive
   let breakeven=-1;
   for(let k=0;k<=n;k++){
     if(a.byK[k].prob>1e-10&&a.byK[k].expPnl>0) breakeven=k;
   }
 
-  // Verdict
   let vHtml='';
   if(a.ev>0.01){
     vHtml=`<div class="verdict-box verdict-positive">
       <strong>Positive expected value.</strong>
-      This bundle is expected to return <strong>${sign(a.ev)}$${Math.abs(a.ev).toFixed(2)}</strong>
-      (${sign(a.ev/a.totalInvested*100)}${Math.abs(a.ev/a.totalInvested*100).toFixed(1)}% ROI) on $${a.totalInvested.toLocaleString()} invested.
-      You have a <strong>${(a.probProfit*100).toFixed(1)}%</strong> chance of profit.
-      ${breakeven===0?'You need <strong>all games to win</strong> to be profitable—one upset wipes out the return.':
-        `You can absorb up to <strong>${breakeven} upset${breakeven>1?'s':''}</strong> and still profit.`}
+      Expected return: <strong>${sign(a.ev)}$${Math.abs(a.ev).toFixed(2)}</strong>
+      (${sign(a.ev/a.totalInvested*100)}${Math.abs(a.ev/a.totalInvested*100).toFixed(1)}% ROI) on $${a.totalInvested.toLocaleString()}.
+      <strong>${(a.probProfit*100).toFixed(1)}%</strong> chance of profit.
+      ${breakeven===0?'You need <strong>all games to win</strong> to profit—one upset wipes out the return.':
+        `Can absorb up to <strong>${breakeven} upset${breakeven>1?'s':''}</strong> and still profit.`}
     </div>`;
   } else if(a.ev>-0.01){
     vHtml=`<div class="verdict-box verdict-neutral">
       <strong>Roughly breakeven.</strong>
-      Expected return is near zero (${sign(a.ev)}$${Math.abs(a.ev).toFixed(2)}).
+      Expected return near zero (${sign(a.ev)}$${Math.abs(a.ev).toFixed(2)}).
       ${(a.probProfit*100).toFixed(1)}% chance of profit.
-      Consider finding games with more model edge.
+      Look for games with more model edge.
     </div>`;
   } else {
     vHtml=`<div class="verdict-box verdict-negative">
       <strong>Negative expected value.</strong>
-      This bundle is expected to lose <strong>$${Math.abs(a.ev).toFixed(2)}</strong>
-      (${(a.ev/a.totalInvested*100).toFixed(1)}% ROI). Some games may have negative edge,
-      meaning the market price exceeds your model’s probability. Consider removing negative-edge games.
+      Expected to lose <strong>$${Math.abs(a.ev).toFixed(2)}</strong>
+      (${(a.ev/a.totalInvested*100).toFixed(1)}% ROI). Some games may have negative edge.
+      Try &ldquo;Select +Edge&rdquo; to keep only games where your model beats the market.
     </div>`;
   }
   $('verdictBox').innerHTML=vHtml;
 
-  // Scenario table + bars
   const maxProb=Math.max(...a.byK.filter(s=>s.prob>1e-10).map(s=>s.prob));
   let sHtml='<table class="scenario-table"><thead><tr>';
-  sHtml+='<th>Upsets</th><th>Probability</th><th style="min-width:80px;"></th><th class="r">Expected P&L</th><th class="r">Cumulative</th>';
+  sHtml+='<th>Upsets</th><th>Probability</th><th style="min-width:70px;"></th><th class="r">Expected P&amp;L</th><th class="r">Cumul.</th>';
   sHtml+='</tr></thead><tbody>';
   let cumProb=0;
   for(let k=0;k<=n;k++){
@@ -889,10 +939,10 @@ function renderAnalysis(){
     cumProb+=s.prob;
     const barW=maxProb>0?(s.prob/maxProb*100):0;
     const barColor=s.expPnl>=0?'var(--bar-prof)':'var(--bar-loss)';
-    const rowCls=s.expPnl>=0?'scenario-row-profit':'scenario-row-loss';
+    const rowCls=s.expPnl>=0?'scenario-row-profit':'';
     sHtml+=`<tr class="${rowCls}">
       <td style="font-weight:600;">${k}</td>
-      <td style="font-variant-numeric:tabular-nums;">${(s.prob*100).toFixed(s.prob<0.001?2:1)}%</td>
+      <td>${(s.prob*100).toFixed(s.prob<0.001?2:1)}%</td>
       <td><div class="prob-bar-track"><div class="prob-bar-fill" style="width:${barW.toFixed(1)}%;background:${barColor};"></div></div></td>
       <td class="r ${pnlCls(s.expPnl)}" style="white-space:nowrap;">${sign(s.expPnl)}$${Math.abs(s.expPnl).toFixed(2)}</td>
       <td class="r" style="color:var(--text-muted);">${(cumProb*100).toFixed(1)}%</td>
@@ -902,11 +952,9 @@ function renderAnalysis(){
   sHtml+='</tbody></table>';
   $('scenarioContent').innerHTML=sHtml;
 
-  // Dashboard
-  const avgEdge=bundle.reduce((s,g)=>s+g.edge,0)/n;
-  const avgTier=bundle.reduce((s,g)=>s+programTier(g.fav).tier,0)/n;
-  const negEdgeCount=bundle.filter(g=>g.edge<-0.005).length;
-  const maxLoss=-n*bet;
+  const avgEdge=selected.reduce((s,g)=>s+g.edge,0)/n;
+  const avgTier=selected.reduce((s,g)=>s+programTier(g.fav).tier,0)/n;
+  const negEdgeCount=selected.filter(g=>g.edge<-0.005).length;
 
   let dHtml='';
   dHtml+=`<div class="stat-card">
@@ -917,57 +965,54 @@ function renderAnalysis(){
   dHtml+=`<div class="stat-card">
     <div class="stat-label">Prob of Profit</div>
     <div class="stat-value ${a.probProfit>=0.5?'sv-green':'sv-red'}">${(a.probProfit*100).toFixed(1)}%</div>
-    <div class="stat-sub">${breakeven>=0?breakeven+' upset'+(breakeven!==1?'s':'')+' tolerable':'no upsets tolerable'}</div>
+    <div class="stat-sub">${breakeven>=0?breakeven+' upset'+(breakeven!==1?'s':'')+' tolerable':'zero upsets tolerable'}</div>
   </div>`;
   dHtml+=`<div class="stat-card">
     <div class="stat-label">Max Loss</div>
-    <div class="stat-value sv-red">$${Math.abs(maxLoss).toLocaleString()}</div>
+    <div class="stat-value sv-red">$${(n*bet).toLocaleString()}</div>
     <div class="stat-sub">all ${n} games upset</div>
   </div>`;
   dHtml+=`<div class="stat-card">
-    <div class="stat-label">Avg Bundle Edge</div>
+    <div class="stat-label">Avg Edge</div>
     <div class="stat-value ${svCls(avgEdge)}">${sign(avgEdge*100)}${Math.abs(avgEdge*100).toFixed(1)}%</div>
-    <div class="stat-sub">${negEdgeCount>0?negEdgeCount+' negative-edge game'+(negEdgeCount>1?'s':''):'all positive edge'}</div>
+    <div class="stat-sub">${negEdgeCount>0?negEdgeCount+' neg-edge game'+(negEdgeCount>1?'s':''):'all positive edge'}</div>
   </div>`;
   dHtml+=`<div class="stat-card">
-    <div class="stat-label">Avg Fav Tier</div>
+    <div class="stat-label">Avg Tier</div>
     <div class="stat-value sv-gold">${avgTier.toFixed(1)}</div>
-    <div class="stat-sub">${avgTier<=1.5?'elite bundle':avgTier<=2.5?'strong bundle':avgTier<=3.5?'mixed bundle':'risky bundle'}</div>
+    <div class="stat-sub">${avgTier<=1.5?'elite bundle':avgTier<=2.5?'strong':avgTier<=3.5?'mixed':'risky'}</div>
   </div>`;
   dHtml+=`<div class="stat-card">
     <div class="stat-label">Bundle Size</div>
     <div class="stat-value sv-teal">${n}</div>
-    <div class="stat-sub">${n<5?'small – high variance':n<10?'moderate diversification':'well diversified'}</div>
+    <div class="stat-sub">${n<5?'small – high variance':n<10?'moderate spread':'well diversified'}</div>
   </div>`;
   $('dashboard').innerHTML=dHtml;
 }
 
 $('addBtn').addEventListener('click',()=>{
-  const fav=$('betTeam').value;
-  const opp=$('oppTeam').value;
+  const fav=$('betTeam').value,opp=$('oppTeam').value;
   const venue=$('venueSelect').value;
   const price=parseFloat($('priceInput').value);
   if(!fav||!opp||fav===opp)return;
   if(isNaN(price)||price<=0||price>=1)return;
   addGame(fav,opp,venue,price);
 });
-
-$('clearBtn').addEventListener('click',()=>{
-  bundle=[];saveBundle();render();
-});
+$('selectEdgeBtn').addEventListener('click',selectEdge);
+$('selectAllBtn').addEventListener('click',selectAll);
+$('deselectAllBtn').addEventListener('click',deselectAll);
+$('clearSlateBtn').addEventListener('click',()=>{slate=[];saveSlate();render();});
 $('betAmountInput').addEventListener('change',renderAnalysis);
 
-const defaultBundle=[
-  {fav:"Georgia",opp:"Western Kentucky",venue:"a",price:0.99},
-  {fav:"Virginia Tech",opp:"Old Dominion",venue:"a",price:0.99},
-  {fav:"Kansas State",opp:"Wake Forest",venue:"a",price:0.95},
-  {fav:"Penn State",opp:"Temple",venue:"a",price:0.91},
-  {fav:"Texas A&M",opp:"Arizona State",venue:"a",price:0.87},
-  {fav:"Wake Forest",opp:"Purdue",venue:"b",price:0.82},
-];
-
-if(!loadBundle()){
-  defaultBundle.forEach(g=>addGame(g.fav,g.opp,g.venue,g.price));
+if(!loadSlate()){
+  [
+    {fav:"Georgia",opp:"Western Kentucky",venue:"a",price:0.99},
+    {fav:"Virginia Tech",opp:"Old Dominion",venue:"a",price:0.99},
+    {fav:"Kansas State",opp:"Wake Forest",venue:"a",price:0.95},
+    {fav:"Penn State",opp:"Temple",venue:"a",price:0.91},
+    {fav:"Texas A&M",opp:"Arizona State",venue:"a",price:0.87},
+    {fav:"Wake Forest",opp:"Purdue",venue:"b",price:0.82},
+  ].forEach(g=>addGame(g.fav,g.opp,g.venue,g.price));
 } else {
   render();
 }
