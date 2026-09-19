@@ -483,14 +483,14 @@ body {
 <div class="app">
   <div class="header">
     <h1>CFB Risk Bundles</h1>
-    <p>Saturday Slate &middot; Price Games &middot; Analyze Your Bundle</p>
+    <p>Week 3 &middot; Saturday, Sept. 19, 2026</p>
   </div>
 
   <div class="explainer">
-    <strong>How to use:</strong> Open Robinhood &rarr; Event Contracts &rarr; College Football.
-    For each game listed, add the matchup and the current &ldquo;Yes&rdquo; price below.
-    The tool calculates your model edge on each game. Toggle games into your bundle,
-    then see the exact probability-weighted risk analysis.
+    <strong>This week&rsquo;s games are pre-loaded.</strong> Open Robinhood &rarr; Event Contracts &rarr;
+    College Football and update the prices below to match. Toggle games IN/OUT to build
+    your bundle, or hit &ldquo;Select +Edge&rdquo; to auto-pick games where the model beats the market.
+    Add any game not listed via the form above.
   </div>
 
   <div class="panel">
@@ -1006,12 +1006,20 @@ $('betAmountInput').addEventListener('change',renderAnalysis);
 
 if(!loadSlate()){
   [
-    {fav:"Georgia",opp:"Western Kentucky",venue:"a",price:0.99},
-    {fav:"Virginia Tech",opp:"Old Dominion",venue:"a",price:0.99},
-    {fav:"Kansas State",opp:"Wake Forest",venue:"a",price:0.95},
-    {fav:"Penn State",opp:"Temple",venue:"a",price:0.91},
-    {fav:"Texas A&M",opp:"Arizona State",venue:"a",price:0.87},
-    {fav:"Wake Forest",opp:"Purdue",venue:"b",price:0.82},
+    {fav:"Ohio State",opp:"Kent State",venue:"a",price:0.98},
+    {fav:"Penn State",opp:"Buffalo",venue:"a",price:0.97},
+    {fav:"Minnesota",opp:"Akron",venue:"a",price:0.95},
+    {fav:"Wisconsin",opp:"Eastern Michigan",venue:"a",price:0.94},
+    {fav:"Tennessee",opp:"UAB",venue:"a",price:0.94},
+    {fav:"USC",opp:"Fresno State",venue:"a",price:0.92},
+    {fav:"Iowa State",opp:"Bowling Green",venue:"a",price:0.93},
+    {fav:"Georgia",opp:"Arkansas",venue:"b",price:0.90},
+    {fav:"Notre Dame",opp:"Michigan State",venue:"a",price:0.88},
+    {fav:"Alabama",opp:"Florida State",venue:"a",price:0.87},
+    {fav:"Kansas State",opp:"Tulane",venue:"a",price:0.85},
+    {fav:"Clemson",opp:"North Carolina",venue:"a",price:0.82},
+    {fav:"Arizona State",opp:"Kansas",venue:"neutral",price:0.72},
+    {fav:"LSU",opp:"Ole Miss",venue:"b",price:0.55},
   ].forEach(g=>addGame(g.fav,g.opp,g.venue,g.price));
 } else {
   render();
