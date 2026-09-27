@@ -21,9 +21,21 @@ def bootstrap_engine_path() -> None:
 
     The trading engine is a sibling directory rather than an installed package,
     so the hub adds it explicitly. Doing this here means no module has to care.
+
+    If the engine is missing, say so in words. The alternative is
+    ``ModuleNotFoundError: No module named 'ym'`` several frames later, which
+    does not tell you that you copied half a project.
     """
+    if not (TRADING_ROOT / "ym").is_dir():
+        raise RuntimeError(
+            f"The trading engine is missing. YM Desk expects to find it at:\n"
+            f"  {TRADING_ROOT}\n\n"
+            f"That folder is part of the same project as this one. If you copied "
+            f"or downloaded only the 'desk' folder, fetch the whole project -- "
+            f"'desk' and 'trading' have to sit side by side."
+        )
     path = str(TRADING_ROOT)
-    if TRADING_ROOT.is_dir() and path not in sys.path:
+    if path not in sys.path:
         sys.path.insert(0, path)
 
 

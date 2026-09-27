@@ -20,6 +20,7 @@ import venv
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+ENGINE = HERE.parent / "trading" / "ym"
 VENV_DIR = HERE / ".venv"
 REQUIREMENTS = HERE / "requirements.txt"
 STAMP = VENV_DIR / ".requirements-stamp"
@@ -39,6 +40,18 @@ def venv_python() -> Path:
     if os.name == "nt":
         return VENV_DIR / "Scripts" / "python.exe"
     return VENV_DIR / "bin" / "python"
+
+
+def check_layout() -> None:
+    """The app is half of a project; check the other half came along."""
+    if not ENGINE.is_dir():
+        raise SetupError(
+            f"Part of the project is missing.\n\n"
+            f"YM Desk needs the trading engine, which should be at:\n"
+            f"  {ENGINE.parent}\n\n"
+            f"If you copied or downloaded only the 'desk' folder, get the whole\n"
+            f"project instead -- 'desk' and 'trading' have to sit side by side."
+        )
 
 
 def check_python_version() -> None:
@@ -185,6 +198,7 @@ def run_app(interpreter: Path, argv: list[str]) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     try:
+        check_layout()
         check_python_version()
         interpreter = ensure_venv()
         prepare_environment(interpreter)

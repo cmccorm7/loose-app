@@ -224,3 +224,41 @@ class TestWrapperScripts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestProjectLayout(unittest.TestCase):
+    """The desk is half a project; the other half has to come with it."""
+
+    def test_the_real_checkout_passes(self):
+        launch.check_layout()   # must not raise in a complete project
+
+    def test_a_missing_engine_is_explained_not_traced(self):
+        missing = Path(tempfile.mkdtemp()) / "trading" / "ym"
+        with mock.patch.object(launch, "ENGINE", missing):
+            with self.assertRaises(launch.SetupError) as caught:
+                launch.check_layout()
+        message = str(caught.exception)
+        self.assertIn("side by side", message)
+        self.assertIn("desk", message)
+
+    def test_the_layout_is_checked_before_anything_is_built(self):
+        # Otherwise the first sign of trouble is a venv built for nothing.
+        order = []
+        with mock.patch.object(launch, "check_layout",
+                               side_effect=lambda: order.append("layout")), \
+             mock.patch.object(launch, "check_python_version",
+                               side_effect=lambda: order.append("python")), \
+             mock.patch.object(launch, "ensure_venv",
+                               side_effect=lambda: order.append("venv") or Path("py")), \
+             mock.patch.object(launch, "prepare_environment"), \
+             mock.patch.object(launch, "run_app", return_value=0):
+            launch.main([])
+        self.assertEqual(order, ["layout", "python", "venv"])
+
+    def test_the_hub_refuses_to_import_without_the_engine(self):
+        import importlib
+        import hub.config as config
+        with mock.patch.object(config, "TRADING_ROOT", Path("/nowhere/at/all")):
+            with self.assertRaises(RuntimeError) as caught:
+                config.bootstrap_engine_path()
+        self.assertIn("side by side", str(caught.exception))

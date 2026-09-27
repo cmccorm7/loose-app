@@ -42,6 +42,11 @@ python run.py                                  # or: python -m hub
 Needs Python 3.10 or newer. If you do not have it, the launcher says so and
 points you at the download — it does not fail silently.
 
+**Take the whole project, not just this folder.** `desk` and `trading` have to
+sit side by side: the app imports the trading engine from next door rather than
+carrying its own copy. The launcher checks for it and says so plainly if it is
+missing.
+
 ## What it does today
 
 | Screen | What it is for |
