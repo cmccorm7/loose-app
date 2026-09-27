@@ -47,7 +47,13 @@ def main(argv: list[str] | None = None) -> int:
     where = resolve_paths(args.home)
     url = f"http://127.0.0.1:{port}"
 
-    print(f"YM Desk\n  data  {where.home}\n  url   {url}\n")
+    print(
+        f"YM Desk\n"
+        f"  data  {where.home}\n"
+        f"  url   {url}\n\n"
+        f"Leave this window open while you use the app.\n"
+        f"Closing it, or pressing Ctrl+C, stops the app.\n"
+    )
     if port != args.port:
         print(f"  (port {args.port} was busy)\n")
     if not args.no_browser:

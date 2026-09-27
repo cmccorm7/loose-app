@@ -4,3 +4,6 @@
 uploads/
 statements.json
 settings.json
+
+# The launcher builds this on first run.
+.venv/

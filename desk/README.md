@@ -8,13 +8,39 @@ terminal dump.
 It runs as a small server on your own machine and opens in your browser. Nothing
 leaves the computer.
 
+## Launching it
+
+**Double-click the launcher in this folder:**
+
+| Your computer | The file to double-click |
+|---|---|
+| Windows | `Start YM Desk.bat` |
+| macOS | `Start YM Desk.command` |
+| Linux | `Start YM Desk.command` (or `./launch.py` from a terminal) |
+
+The first run builds a private Python environment in `desk/.venv` and installs
+what the app needs — a minute or two, once, and it needs the internet that one
+time. Every run after that starts immediately.
+
+A terminal window opens showing where your data lives and the address it is
+serving on, then your browser opens at `http://127.0.0.1:8787`. **Leave that
+window open while you use the app**; closing it stops the server.
+
+On Windows you can right-click `Start YM Desk.bat` → **Send to → Desktop
+(create shortcut)** to keep it somewhere handy. On macOS, drag
+`Start YM Desk.command` to the Dock.
+
+If you would rather drive it yourself:
+
 ```bash
 cd desk
+python -m venv .venv && . .venv/bin/activate   # .venv\Scripts\activate on Windows
 pip install -r requirements.txt
-python run.py                 # or: python -m hub
+python run.py                                  # or: python -m hub
 ```
 
-It prints where your data lives and opens `http://127.0.0.1:8787`.
+Needs Python 3.10 or newer. If you do not have it, the launcher says so and
+points you at the download — it does not fail silently.
 
 ## What it does today
 
@@ -76,7 +102,10 @@ editor.
 
 ```
 desk/
-├── run.py                 double-click launcher
+├── Start YM Desk.bat      double-click launcher (Windows)
+├── Start YM Desk.command  double-click launcher (macOS, Linux)
+├── launch.py              first-run setup: builds .venv, installs, hands over
+├── run.py                 starts the app in an environment already prepared
 └── hub/
     ├── config.py          data paths; puts ../trading/ym on the import path
     ├── store.py           settings and the statement manifest (atomic JSON)
@@ -119,12 +148,12 @@ as by hue, so colour is never the only channel.
 
 ```bash
 cd desk
-python -m unittest discover -s tests -t .     # 88 tests
+python -m unittest discover -s tests -t .     # 117 tests
 ```
 
 They cover format detection, preview, the two-step import, reversibility,
-the analysis contracts, settings persistence, every route, and the
-cross-origin guard.
+the analysis contracts, settings persistence, every route, the cross-origin
+guard, and the launcher's setup and repair paths.
 
 ## Next
 
