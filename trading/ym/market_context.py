@@ -19,7 +19,7 @@ from them, so the tag rule can change without re-reading a single bar.
 from __future__ import annotations
 
 import statistics
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import date, datetime, timedelta
 from typing import Sequence
 
@@ -113,6 +113,12 @@ class TradeContext:
     level_rejections: int = 0
     level_distance: float | None = None       # points from entry to the level
     stop_beyond_level: bool = False
+    # The held level on the *other* side: the floor beneath a short, the
+    # ceiling above a long. Needed to see a trade taken against a level that is
+    # holding, and to know what the move has to get through.
+    opposing_level_price: float | None = None
+    opposing_level_rejections: int = 0
+    opposing_level_distance: float | None = None
     run_from_swing: float | None = None       # how far it had already moved
     run_from_swing_atr: float | None = None
     location: str = LOCATION_UNKNOWN
@@ -422,6 +428,15 @@ def annotate(
                 if trade.direction is Direction.LONG
                 else trade.stop_price > level.floor
             )
+
+    opposing = relevant_level(
+        tracker, trade.direction.opposite, trade.entry_price,
+        rules.min_level_rejections,
+    )
+    if opposing is not None:
+        context.opposing_level_price = opposing.price
+        context.opposing_level_rejections = opposing.rejections
+        context.opposing_level_distance = abs(trade.entry_price - opposing.price)
 
     context.run_from_swing = run_since_last_swing(
         coarse, trade.direction, trade.entry_price, rules.swing_strength

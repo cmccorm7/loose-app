@@ -14,7 +14,7 @@ import sqlite3
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Sequence
 
 from .core import Bar
 from .data.loaders import resample

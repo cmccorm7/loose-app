@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 from ym.barstore import BarStore, infer_timeframe
 from ym.core import Bar
 from ym.data import filter_session, generate_bars
-from ym.sessions import DEFAULT_SESSION, exchange_tz
+from ym.sessions import exchange_tz
 
 ET = exchange_tz()
 

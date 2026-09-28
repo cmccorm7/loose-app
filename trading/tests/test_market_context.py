@@ -16,9 +16,9 @@ from ym.core import Direction, ExitReason, Trade
 from ym.data import filter_session, generate_bars, resample
 from ym.levels import find_swings
 from ym.market_context import (
-    AT_LEVEL, CHASING, EXIT_EARLY, EXIT_RODE, EXIT_STOPPED, MID_RANGE,
+    AT_LEVEL, CHASING, EXIT_EARLY, EXIT_RODE, EXIT_STOPPED,
     TREND_DOWN, TREND_RANGE, TREND_UNKNOWN, TREND_UP, TaggingRules,
-    annotate, annotate_all, apply_tags, average_true_range, classify_location,
+    annotate, annotate_all, apply_tags, average_true_range,
     excursions, read_trend, run_since_last_swing,
 )
 
