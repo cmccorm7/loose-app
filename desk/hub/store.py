@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .config import DEFAULT_SETTINGS, Paths
+from .config import DEFAULT_SETTINGS, Paths, validate_settings
 
 
 def _now() -> str:
@@ -75,6 +75,7 @@ class Store:
             unknown = set(changes) - set(DEFAULT_SETTINGS)
             if unknown:
                 raise KeyError(f"unknown setting(s): {sorted(unknown)}")
+            validate_settings(changes)
             current.update(changes)
             self._write(self.paths.settings, current)
             return current

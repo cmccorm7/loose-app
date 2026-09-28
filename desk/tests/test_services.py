@@ -54,11 +54,13 @@ class TestUploadAndImport(HubCase):
             again["preview"]["notes"],
         )
 
-    def test_bar_data_cannot_be_imported_into_the_journal(self):
+    def test_bar_data_goes_to_the_bar_store_not_the_journal(self):
         uploaded = self.hub.upload_statement("bars.txt", BAR_EXPORT)
-        with self.assertRaises(HubError) as caught:
-            self.hub.import_statement(uploaded["statement"]["id"])
-        self.assertIn("market data", str(caught.exception))
+        result = self.hub.import_statement(uploaded["statement"]["id"])
+        self.assertEqual(result["kind"], "bars")
+        self.assertGreater(result["imported"], 0)
+        self.assertEqual(self.hub.overview()["trade_count"], 0,
+                         "bars are market history, not trades")
 
     def test_importing_an_unknown_id_is_refused(self):
         with self.assertRaises(HubError):

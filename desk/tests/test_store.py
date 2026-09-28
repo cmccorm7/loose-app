@@ -87,3 +87,59 @@ class TestPaths(HubCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSettingValidation(HubCase):
+    """A bad value caught here names the setting; caught later it surfaces as a
+    failure deep in analysis, a long way from the mistake."""
+
+    def test_a_choice_setting_rejects_anything_else(self):
+        from hub.services import HubError
+        with self.assertRaises(HubError) as caught:
+            self.hub.update_settings({"location_mode": "vibes"})
+        self.assertIn("location_mode", str(caught.exception))
+
+    def test_both_valid_location_rules_are_accepted(self):
+        for mode in ("stop_distance", "atr_zone"):
+            with self.subTest(mode=mode):
+                self.assertEqual(
+                    self.hub.update_settings({"location_mode": mode})["location_mode"],
+                    mode,
+                )
+
+    def test_numbers_must_be_numbers(self):
+        from hub.services import HubError
+        with self.assertRaises(HubError):
+            self.hub.update_settings({"equity": "lots"})
+
+    def test_numbers_must_be_positive(self):
+        from hub.services import HubError
+        for change in ({"equity": -5}, {"risk_per_trade_pct": 0}):
+            with self.subTest(change=change):
+                with self.assertRaises(HubError):
+                    self.hub.update_settings(change)
+
+    def test_clearing_an_optional_number_is_allowed(self):
+        self.hub.update_settings({"fixed_dollar_risk": 10.0})
+        self.assertIsNone(
+            self.hub.update_settings({"fixed_dollar_risk": None})["fixed_dollar_risk"]
+        )
+
+    def test_a_mistyped_timezone_is_caught(self):
+        # A typo here silently shifts every session boundary.
+        from hub.services import HubError
+        with self.assertRaises(HubError):
+            self.hub.update_settings({"timezone": "America/New_Yrok"})
+
+    def test_a_real_timezone_is_accepted(self):
+        self.assertEqual(
+            self.hub.update_settings({"timezone": "America/Chicago"})["timezone"],
+            "America/Chicago",
+        )
+
+    def test_a_refused_change_leaves_the_settings_alone(self):
+        from hub.services import HubError
+        before = self.hub.settings()
+        with self.assertRaises(HubError):
+            self.hub.update_settings({"equity": 9_000, "location_mode": "vibes"})
+        self.assertEqual(self.hub.settings(), before)

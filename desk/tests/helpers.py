@@ -15,7 +15,13 @@ from hub.services import Hub                      # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "trading"))
 
+from ym.backtest import BacktestConfig, Backtester    # noqa: E402
+from ym.data import (                                # noqa: E402
+    DiscretionaryHabits, DiscretionaryTrader, filter_session, generate_bars, resample,
+)
 from ym.data.trader import Habits, simulate_trader_history  # noqa: E402
+from ym.instruments import MYM                       # noqa: E402
+from ym.risk import RiskLimits, SizingMethod         # noqa: E402
 
 NINJA_HEADER = [
     "Instrument", "Market pos.", "Quantity", "Entry price", "Exit price",
@@ -74,3 +80,51 @@ class HubCase(unittest.TestCase):
         uploaded = self.hub.upload_statement(name, content)
         self.assertIsNone(uploaded["error"], uploaded["error"])
         return self.hub.import_statement(uploaded["statement"]["id"], **options)
+
+
+# --- market data, and trades that genuinely line up with it ----------------
+
+SMALL_ACCOUNT = RiskLimits(
+    sizing=SizingMethod.FIXED_DOLLAR, fixed_dollar_risk=10.0, max_contracts=1,
+    max_daily_loss_pct=None, max_consecutive_losses=None, max_drawdown_pct=None,
+    min_stop_ticks=1,
+)
+
+
+def minute_bars(days: int = 20, seed: int = 7):
+    from datetime import date
+    return filter_session(generate_bars(date(2026, 5, 1), days=days, seed=seed), "rth")
+
+
+def bar_export(bars) -> bytes:
+    """A NinjaTrader historical export: semicolons, no header, no symbol."""
+    return "\n".join(
+        f"{bar.ts:%Y%m%d %H%M%S};{bar.open};{bar.high};{bar.low};{bar.close};"
+        f"{int(bar.volume)}"
+        for bar in bars
+    ).encode()
+
+
+def trades_against(bars, seed: int = 5):
+    """Simulated discretionary trades taken off these very bars."""
+    return Backtester(
+        MYM, DiscretionaryTrader(DiscretionaryHabits(), seed=seed), 2_000,
+        SMALL_ACCOUNT, BacktestConfig(slippage_ticks=1.0),
+    ).run(resample(bars, 5)).trades
+
+
+def trade_export(trades) -> bytes:
+    """Those trades, in the shape NinjaTrader writes them."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=";")
+    writer.writerow(NINJA_HEADER)
+    for trade in trades:
+        writer.writerow([
+            trade.symbol, trade.direction.value, trade.contracts,
+            trade.entry_price, trade.exit_price,
+            trade.entry_time.strftime("%m/%d/%Y %H:%M:%S"),
+            trade.exit_time.strftime("%m/%d/%Y %H:%M:%S"),
+            trade.setup, trade.exit_reason.value,
+            f"${trade.commission:.2f}", "$0.00", "$0.00",
+        ])
+    return buffer.getvalue().encode()

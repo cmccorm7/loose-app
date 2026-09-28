@@ -148,6 +148,22 @@ def create_app(home: str | None = None, hub: Hub | None = None) -> FastAPI:
             limit=limit, start=start, end=end, symbol=symbol, setup=setup
         )
 
+    @app.get("/api/bars")
+    async def bars(request: Request):
+        return hub_of(request).bars_coverage()
+
+    @app.post("/api/retag")
+    async def retag(request: Request):
+        return hub_of(request).retag()
+
+    @app.get("/api/context")
+    async def context(request: Request, min_trades: int = Query(12, ge=1)):
+        return hub_of(request).market_context(min_trades=min_trades)
+
+    @app.get("/api/context/trades")
+    async def context_trades(request: Request, limit: int = Query(200, ge=1, le=2000)):
+        return hub_of(request).trade_contexts(limit=limit)
+
     @app.get("/api/behavior")
     async def behavior(
         request: Request, min_trades: int = Query(20, ge=1),

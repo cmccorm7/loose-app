@@ -256,7 +256,6 @@ class TestProjectLayout(unittest.TestCase):
         self.assertEqual(order, ["layout", "python", "venv"])
 
     def test_the_hub_refuses_to_import_without_the_engine(self):
-        import importlib
         import hub.config as config
         with mock.patch.object(config, "TRADING_ROOT", Path("/nowhere/at/all")):
             with self.assertRaises(RuntimeError) as caught:

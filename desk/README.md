@@ -55,6 +55,7 @@ missing.
 | **Statements** | Drag in a file, review the preview, decide whether to import. |
 | **Analysis** | Expectancy per hour / weekday / setup / session, and the trade list. |
 | **Behavior** | The findings from `ym.behavior`, with the guardrails they imply. |
+| **Market context** | Your trades read against the bars: trend, location, exit quality, and whether your stop meant anything. |
 | **Position size** | What a trade may cost, and how many contracts that buys. |
 | **Settings** | Account size, risk limits, statement timezone, data folder. |
 
@@ -80,9 +81,9 @@ import time, or fill in stops per trade later.
   → right-click → Export.
 - **Any trade CSV** with at least an entry time, a direction and an entry price.
   Column names are matched loosely; `;` and `,` both work.
-- **Bar data** (NinjaTrader historical exports, OHLCV CSVs) is recognised and
-  described, but not added to your journal — it is market history, for
-  backtesting, not a record of what you did.
+- **Bar data** (NinjaTrader historical exports, OHLCV CSVs) is stored as market
+  history rather than added to your journal. It is what makes the Market
+  context screen possible, so import it for the days you traded.
 - **PDFs are refused** with instructions, rather than guessed at. Broker PDF
   parsing is a later job.
 
@@ -94,6 +95,7 @@ Everything sits in one folder — `~/.ym-desk` by default, or wherever
 ```
 ~/.ym-desk/
 ├── journal.db        your trades (SQLite — the same journal the CLI uses)
+├── bars.db           market data, for reading trades against the chart
 ├── uploads/          the statement files exactly as you uploaded them
 ├── statements.json   what was imported, when, and with which options
 └── settings.json     account size, risk limits, timezone

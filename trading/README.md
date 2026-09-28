@@ -13,6 +13,7 @@ Four layers, sharing one set of rules:
 | **Backtest** | `ym/backtest/`, `ym/sweep.py` | Bar-by-bar engine with pessimistic fills — and it routes every signal through the *same* risk manager, so a strategy can't look good by taking trades your account would never have allowed. Parameter sweeps report standard errors and an out-of-sample half. |
 | **Journal** | `ym/journal.py` | SQLite store for trades you really took, with a NinjaTrader importer. |
 | **Behavior** | `ym/behavior.py`, `ym/coach.py` | Finds the patterns in *how* you trade — the afternoon fade, the revenge re-entry, the give-back — and turns them into guardrails and in-session nudges. |
+| **Market context** | `ym/barstore.py`, `ym/market_context.py`, `ym/context_findings.py` | Joins trades to the bars around them: trend, whether the level was holding, how much of the move you took, and whether your stop was bigger than the noise. |
 
 No runtime dependencies beyond the standard library.
 
@@ -361,6 +362,9 @@ trading/
 │   ├── risk.py           sizing, loss budgets, circuit breakers
 │   ├── metrics.py        expectancy, profit factor, drawdown, breakdowns
 │   ├── levels.py         support/resistance detection and rejection counting
+│   ├── barstore.py       market bars in SQLite, resampled on read
+│   ├── market_context.py trades read against the bars: trend, location, exits
+│   ├── context_findings.py  what those tags say about how you trade
 │   ├── sweep.py          parameter sweeps with an out-of-sample split
 │   ├── journal.py        SQLite journal + NinjaTrader import
 │   ├── behavior.py       the twelve detectors and guardrail synthesis
@@ -369,7 +373,7 @@ trading/
 │   ├── backtest/         strategy interface and execution engine
 │   ├── strategies/       three worked examples
 │   └── data/             loaders, synthetic bars, simulated trader
-├── tests/                279 tests, standard-library unittest
+├── tests/                354 tests, standard-library unittest
 └── examples/first_week.py
 ```
 
@@ -384,7 +388,7 @@ Two details worth knowing because they cause silent, wrong answers elsewhere:
 
 ```bash
 cd trading
-python -m unittest discover -s tests      # 279 tests, ~13 seconds
+python -m unittest discover -s tests      # 354 tests, ~40 seconds
 ```
 
 The behavioral tests assert both halves of the contract: detectors must fire on

@@ -26,9 +26,13 @@ from .store import StatementRecord, Store
 bootstrap_engine_path()
 
 from ym import behavior as behavior_module            # noqa: E402
+from ym import context_findings                      # noqa: E402
+from ym.barstore import BarStore                     # noqa: E402
 from ym.core import Trade                             # noqa: E402
 from ym.instruments import REGISTRY, get_instrument   # noqa: E402
+from ym.data import load_bars                        # noqa: E402
 from ym.journal import Journal, parse_trade_csv       # noqa: E402
+from ym.market_context import TaggingRules, annotate_all, apply_tags  # noqa: E402
 from ym.metrics import GROUPERS, compute_metrics, daily_pnl, equity_curve, group_by  # noqa: E402
 from ym.risk import RiskLimits, RiskManager           # noqa: E402
 from ym.sessions import DEFAULT_SESSION               # noqa: E402
@@ -93,6 +97,61 @@ class Hub:
     def _journal(self) -> Journal:
         return Journal(self.paths.journal)
 
+    def _bars(self) -> BarStore:
+        return BarStore(self.paths.bars)
+
+    def tagging_rules(self) -> TaggingRules:
+        return TaggingRules(location_mode=self.settings()["location_mode"])
+
+    def _fingerprint(self) -> tuple:
+        """What the cached contexts were computed from."""
+        with self._journal() as journal:
+            trades = journal.count()
+        with self._bars() as store:
+            bars = store.count()
+        return (trades, bars, self.settings()["location_mode"])
+
+    def contexts(self, refresh: bool = False) -> list:
+        """Every trade read against the bars, cached until something changes.
+
+        Reading a few hundred trades against a few months of bars takes long
+        enough that doing it on every page load would be felt.
+        """
+        stamp = self._fingerprint()
+        cached = getattr(self, "_context_cache", None)
+        if not refresh and cached is not None and cached[0] == stamp:
+            return cached[1]
+        with self._journal() as journal:
+            trades = journal.trades()
+        if not trades:
+            self._context_cache = (stamp, [])
+            return []
+        with self._bars() as store:
+            found = annotate_all(trades, store, self.tagging_rules())
+        self._context_cache = (stamp, found)
+        return found
+
+    def retag(self) -> dict:
+        """Re-read every trade against the bars and write the tags back.
+
+        Runs after any import, so tags appear without being asked for, and can
+        be run again when the bars catch up with the trades.
+        """
+        with self._journal() as journal:
+            trades = journal.trades()
+        if not trades:
+            return {"tagged": 0, "untagged": 0, "trades": 0}
+        found = self.contexts(refresh=True)
+        changed = apply_tags(trades, found)
+        with self._journal() as journal:
+            for trade in trades:
+                journal.update(trade.trade_id, tags=",".join(trade.tags))
+        return {
+            "tagged": changed,
+            "untagged": len(trades) - changed,
+            "trades": len(trades),
+        }
+
     def _trades(self, **filters) -> list[Trade]:
         with self._journal() as journal:
             return journal.trades(**filters)
@@ -105,7 +164,7 @@ class Hub:
     def update_settings(self, changes: dict) -> dict:
         try:
             return self.store.update_settings(changes)
-        except KeyError as exc:
+        except (KeyError, ValueError) as exc:
             raise HubError(str(exc)) from exc
 
     def instruments(self) -> list[dict]:
@@ -212,10 +271,7 @@ class Hub:
                 f"trades). Delete it first if you want to re-import."
             )
         if record.kind == BAR_KIND:
-            raise HubError(
-                "this file is market data, not a statement -- there is nothing "
-                "to add to the journal. Use it for backtesting instead."
-            )
+            return self._import_bars(record, symbol, tz)
         if record.kind != TRADE_KIND:
             raise HubError(f"cannot import a file of kind {record.kind!r}")
 
@@ -261,8 +317,67 @@ class Hub:
             "excursion_unit": excursion_unit,
         }
         self.store.save_statement(record)
+        tagged = self.retag()
         return {"statement": record.to_dict(), "imported": len(trades),
-                "warnings": warnings}
+                "warnings": warnings, "kind": TRADE_KIND, "retagged": tagged}
+
+    def _import_bars(
+        self, record: StatementRecord, symbol: str | None, tz: str | None
+    ) -> dict:
+        """Store market data, which is what makes the context tags possible."""
+        settings = self.settings()
+        chosen = (symbol or settings["symbol"]).upper()
+        path = self.paths.uploads / record.stored_as
+        try:
+            bars = load_bars(path, tz=tz or settings["timezone"])
+        except ValueError as exc:
+            record.status = "failed"
+            record.error = str(exc)
+            self.store.save_statement(record)
+            raise HubError(str(exc)) from exc
+
+        with self._bars() as store:
+            stored = store.add(chosen, bars)
+        record.status = "imported"
+        record.rows_imported = stored
+        record.imported_at = _now()
+        record.error = ""
+        record.options = {**record.options, "symbol": chosen,
+                          "timezone": tz or settings["timezone"]}
+        self.store.save_statement(record)
+        tagged = self.retag()
+        return {
+            "statement": record.to_dict(), "imported": stored, "warnings": [],
+            "kind": BAR_KIND, "symbol": chosen, "retagged": tagged,
+        }
+
+    def bars_coverage(self) -> dict:
+        """What market data is held, and how much of the journal it reaches."""
+        with self._bars() as store:
+            symbols = store.symbols()
+            coverage = []
+            covered_days: set = set()
+            for symbol in symbols:
+                found = store.coverage(symbol)
+                if found is None:
+                    continue
+                covered_days |= store.covered_days(symbol)
+                coverage.append({
+                    "symbol": found["symbol"],
+                    "timeframes": found["timeframes"],
+                    "first": found["first"].isoformat(),
+                    "last": found["last"].isoformat(),
+                    "bars": found["bars"],
+                    "days": len(store.covered_days(symbol)),
+                })
+        contexts = self.contexts()
+        analysed = sum(1 for context in contexts if context.has_bars)
+        return {
+            "symbols": coverage,
+            "total_bars": sum(item["bars"] for item in coverage),
+            "trades_with_context": analysed,
+            "trades_without_context": len(contexts) - analysed,
+        }
 
     def delete_statement(self, statement_id: str, remove_trades: bool = True) -> dict:
         """Remove an upload, and by default the trades it contributed."""
@@ -271,16 +386,25 @@ class Hub:
             raise HubError(f"no statement {statement_id!r}")
 
         removed_trades = 0
+        removed_bars = 0
         if remove_trades and record.status == "imported":
-            with self._journal() as journal:
-                removed_trades = journal.delete_by_source(record.source_tag)
+            if record.kind == BAR_KIND:
+                # Bars are shared, not owned by one upload, so this clears the
+                # whole symbol rather than guessing which rows came from here.
+                with self._bars() as store:
+                    removed_bars = store.delete(record.options.get("symbol", ""))
+            else:
+                with self._journal() as journal:
+                    removed_trades = journal.delete_by_source(record.source_tag)
 
         path = self.paths.uploads / record.stored_as
         path.unlink(missing_ok=True)
         self.store.remove_statement(statement_id)
+        self._context_cache = None
         return {
             "deleted": record.to_dict(),
             "trades_removed": removed_trades,
+            "bars_removed": removed_bars,
         }
 
     # -- analysis ----------------------------------------------------------
@@ -414,6 +538,38 @@ class Hub:
                 for key, value in report.guardrails().items()
             },
             "actionable_count": len(report.actionable()),
+        }
+
+    def market_context(self, min_trades: int = 12) -> dict:
+        """The findings that need the bars."""
+        with self._journal() as journal:
+            trades = journal.trades()
+        report = context_findings.analyse(trades, self.contexts(), min_trades)
+        return {
+            "unit": report.unit,
+            "analysed": report.analysed,
+            "unanalysed": report.unanalysed,
+            "notes": report.notes,
+            "headline": report.headline,
+            "actionable_count": len(report.actionable()),
+            "findings": [
+                {
+                    key: value for key, value in asdict(finding).items()
+                    if key != "guardrail"
+                }
+                for finding in report.findings
+            ],
+        }
+
+    def trade_contexts(self, limit: int = 200) -> dict:
+        """Per-trade context rows, newest last."""
+        found = self.contexts()
+        rows = [context.to_dict() for context in found[-limit:]]
+        return {
+            "contexts": rows,
+            "shown": len(rows),
+            "total": len(found),
+            "location_mode": self.settings()["location_mode"],
         }
 
     def position_size(

@@ -51,6 +51,10 @@ class Paths:
         return self.home / "journal.db"
 
     @property
+    def bars(self) -> Path:
+        return self.home / "bars.db"
+
+    @property
     def uploads(self) -> Path:
         return self.home / "uploads"
 
@@ -87,6 +91,54 @@ DEFAULT_SETTINGS = {
     # Statements rarely record your stop. This is the fallback used to give
     # imported trades an R-multiple; None means leave R unavailable.
     "default_stop_points": None,
+    # Which definition of "at a held level" the tags use. "stop_distance" asks
+    # whether your stop sits beyond the level, so the tag answers whether risk
+    # was structural; "atr_zone" only asks whether the level is nearby.
+    "location_mode": "stop_distance",
+    # Fixed dollars risked per trade, for accounts sized in dollars rather than
+    # percentages. None falls back to risk_per_trade_pct.
+    "fixed_dollar_risk": None,
     # Nothing is sent to a model provider without an explicit approval step.
     "ai_share_mode": "ask",
 }
+
+
+# What each setting is allowed to be. A wrong value caught here names the
+# setting; the same value caught later surfaces as a failure deep in analysis,
+# a long way from the mistake.
+CHOICES = {
+    "location_mode": ("stop_distance", "atr_zone"),
+    "ai_share_mode": ("ask", "summaries", "full"),
+}
+
+POSITIVE = ("equity", "risk_per_trade_pct", "fixed_dollar_risk",
+            "default_stop_points", "max_daily_loss_pct", "max_drawdown_pct")
+
+
+def validate_settings(changes: dict) -> None:
+    """Raise ValueError on a setting that cannot mean anything."""
+    for key, allowed in CHOICES.items():
+        if key in changes and changes[key] not in allowed:
+            raise ValueError(
+                f"{key} must be one of {list(allowed)}, not {changes[key]!r}"
+            )
+    for key in POSITIVE:
+        value = changes.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise ValueError(f"{key} must be a number, not {value!r}")
+        if value <= 0:
+            raise ValueError(f"{key} must be greater than zero, not {value}")
+    if "timezone" in changes:
+        from .config import exchange_timezone_check
+        exchange_timezone_check(changes["timezone"])
+
+
+def exchange_timezone_check(name: str) -> None:
+    """A timezone typo silently shifts every session boundary, so check it."""
+    try:
+        from zoneinfo import ZoneInfo
+        ZoneInfo(str(name))
+    except Exception as exc:
+        raise ValueError(f"unknown timezone {name!r}") from exc

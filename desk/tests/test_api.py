@@ -76,11 +76,12 @@ class TestRoutes(ApiCase):
         self.assertIsNotNone(response.json()["error"])
         self.assertIsNone(response.json()["preview"])
 
-    def test_importing_bar_data_is_a_400(self):
+    def test_importing_bar_data_stores_it_as_market_history(self):
         statement_id = self.upload(BAR_EXPORT, "bars.txt").json()["statement"]["id"]
         response = self.client.post(f"/api/statements/{statement_id}/import", json={})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("market data", response.json()["detail"])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["kind"], "bars")
+        self.assertEqual(self.client.get("/api/overview").json()["trade_count"], 0)
 
     def test_an_unknown_import_option_is_refused(self):
         statement_id = self.upload().json()["statement"]["id"]

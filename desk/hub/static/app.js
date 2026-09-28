@@ -399,10 +399,27 @@ function previewHtml(statement, preview) {
     </tr>`).join('');
 
   if (preview.kind === 'bars') {
-    return `<p><strong>${escapeHtml(preview.format_label)}</strong> — ${preview.row_count} bars.</p>
-      ${notes}<pre class="muted small">${escapeHtml(preview.summary)}</pre>
+    return `<p><strong>${escapeHtml(preview.format_label)}</strong> —
+        ${preview.row_count.toLocaleString()} bars,
+        ${shortDate(preview.period.first)} to ${shortDate(preview.period.last)}.</p>
+      <pre class="muted small">${escapeHtml(preview.summary)}</pre>
+      <div class="form-grid" style="margin-top:14px">
+        <label>Which instrument are these bars for?
+          <select id="import-symbol">
+            ${state.instruments.map((instrument) =>
+              `<option value="${instrument.symbol}"
+                ${instrument.symbol === state.settings.symbol ? 'selected' : ''}>
+                ${instrument.symbol} — ${escapeHtml(instrument.name)}</option>`).join('')}
+          </select>
+          <span class="hint">Bar exports do not name the instrument, so this cannot
+            be detected. Getting it wrong would price every trade incorrectly.</span>
+        </label>
+      </div>
       <div class="modal-actions">
-        <button class="ghost-button" data-action="close">Close</button>
+        <button class="ghost-button" data-action="close">Cancel</button>
+        <button class="primary-button" data-action="import" data-id="${statement.id}">
+          Store these bars
+        </button>
       </div>`;
   }
   return `
@@ -549,6 +566,108 @@ async function renderBehavior() {
       ${report.days} days, not laws. Act on the ones you recognise.</p>`;
 }
 
+async function renderContext() {
+  const body = $('#context-body');
+  const [coverage, report] = await Promise.all([
+    api.get('/api/bars'), api.get('/api/context'),
+  ]);
+  $('#nav-context-count').textContent =
+    report.actionable_count ? report.actionable_count : '';
+
+  if (!coverage.symbols.length) {
+    body.innerHTML = `<div class="empty-state">
+      <h2>No market data yet</h2>
+      <p>These findings read each trade against the bars around it — whether the
+         level was holding, whether you were with the trend, what the move
+         offered after you were out. That needs price data.</p>
+      <p class="muted small">In NinjaTrader: <strong>Tools → Historical Data →
+         Export</strong>, 1-minute, covering your trading days and a few before.
+         Then drop it on the Statements screen.</p>
+      <button class="primary-button" data-goto="statements">Upload bar data</button>
+    </div>`;
+    return;
+  }
+
+  const coverageRows = coverage.symbols.map((item) => `<tr>
+      <td>${escapeHtml(item.symbol)}</td>
+      <td>${item.bars.toLocaleString()}</td>
+      <td>${item.timeframes.map((m) => `${m}m`).join(', ')}</td>
+      <td>${plural(item.days, 'day')}</td>
+      <td>${shortDate(item.first)} → ${shortDate(item.last)}</td>
+    </tr>`).join('');
+
+  const gap = coverage.trades_without_context;
+  const headline = Object.entries(report.headline).map(([key, value]) =>
+    tile(key, escapeHtml(String(value)))).join('');
+
+  body.innerHTML = `
+    <div class="card">
+      <h2>Market data</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Symbol</th><th>Bars</th><th>Timeframe</th><th>Days</th>
+          <th>Covering</th></tr></thead>
+        <tbody>${coverageRows}</tbody>
+      </table></div>
+      <p class="muted small" style="margin-top:8px">
+        ${coverage.trades_with_context} of
+        ${coverage.trades_with_context + gap} trades have bars around them.
+        ${gap ? `<strong>${plural(gap, 'trade')}</strong> cannot be analysed — import bars covering those dates.` : ''}
+      </p>
+      <button class="ghost-button" id="retag-button">Re-read trades against the bars</button>
+    </div>
+    ${headline ? `<div class="tile-row">${headline}</div>` : ''}
+    ${report.notes.map((note) => `<div class="note">${escapeHtml(note)}</div>`).join('')}
+    ${report.findings.length ? report.findings.map((finding) => `
+      <article class="finding finding-${finding.severity}">
+        <div class="finding-head">
+          <h3>${escapeHtml(finding.headline)}</h3>
+          <span class="severity severity-${finding.severity}">${finding.severity}</span>
+        </div>
+        <p class="finding-detail">${escapeHtml(finding.detail)}</p>
+        <div class="finding-suggestion">${escapeHtml(finding.suggestion)}</div>
+        <div class="finding-stats">
+          n=${finding.sample} · effect ${signed(finding.effect, 2)}${escapeHtml(finding.effect_unit || report.unit)}
+          · p≈${finding.p_value == null ? 'n/a' : finding.p_value.toFixed(3)}
+          · confidence ${escapeHtml(finding.confidence)}
+        </div>
+      </article>`).join('')
+      : '<div class="note">Not enough trades with bar context to look for patterns yet.</div>'}
+    <div class="card">
+      <h2>Tagged trades</h2>
+      <div class="table-wrap scroll"><table id="context-table"></table></div>
+    </div>`;
+
+  $('#retag-button').addEventListener('click', async (event) => {
+    event.target.disabled = true;
+    try {
+      const result = await api.post('/api/retag');
+      toast(`Re-read ${plural(result.tagged, 'trade')}.`, 'success');
+      await renderContext();
+    } catch (error) {
+      toast(error.message, 'error');
+      event.target.disabled = false;
+    }
+  });
+
+  const { contexts } = await api.get('/api/context/trades?limit=200');
+  const analysed = contexts.filter((row) => row.has_bars);
+  $('#context-table').innerHTML = `
+    <thead><tr><th>Day</th><th>Time</th><th>Side</th><th>Trend</th><th>Location</th>
+      <th>Exit</th><th>Stop/bar</th><th>Captured</th><th>Level held</th></tr></thead>
+    <tbody>${[...analysed].reverse().map((row) => `<tr>
+      <td>${escapeHtml(row.session_day)}</td>
+      <td>${escapeHtml(row.entry_time.slice(11, 16))}</td>
+      <td>${escapeHtml(row.direction)}</td>
+      <td class="${row.with_trend === false ? 'neg' : row.with_trend ? 'pos' : ''}">${escapeHtml(row.trend)}</td>
+      <td>${escapeHtml(row.location.replace('_', ' '))}</td>
+      <td>${escapeHtml(row.exit_quality)}</td>
+      <td class="${row.stop_vs_bar != null && row.stop_vs_bar < 1 ? 'neg' : ''}">
+        ${row.stop_vs_bar == null ? '—' : `${row.stop_vs_bar.toFixed(2)}x`}</td>
+      <td>${row.capture_ratio == null ? '—' : `${Math.round(row.capture_ratio * 100)}%`}</td>
+      <td>${row.level_rejections ? `${row.level_rejections}x` : '—'}</td>
+    </tr>`).join('')}</tbody>`;
+}
+
 async function renderSizing() {
   const form = $('#size-form');
   $('#size-equity').value = state.settings.equity;
@@ -599,6 +718,8 @@ async function renderSettings() {
   $('#set-drawdown').value = settings.max_drawdown_pct;
   $('#set-tz').value = settings.timezone;
   $('#set-stop').value = settings.default_stop_points ?? '';
+  $('#set-riskdollars').value = settings.fixed_dollar_risk ?? '';
+  $('#set-location').value = settings.location_mode;
   const form = $('#settings-form');
   if (!form.dataset.bound) {
     form.dataset.bound = '1';
@@ -614,6 +735,9 @@ async function renderSettings() {
           max_drawdown_pct: Number($('#set-drawdown').value),
           timezone: $('#set-tz').value.trim(),
           default_stop_points: stop === '' ? null : Number(stop),
+          fixed_dollar_risk: $('#set-riskdollars').value === ''
+            ? null : Number($('#set-riskdollars').value),
+          location_mode: $('#set-location').value,
         });
         toast('Settings saved', 'success');
       } catch (error) {
@@ -630,6 +754,7 @@ const renderers = {
   statements: renderStatements,
   analysis: renderAnalysis,
   behavior: renderBehavior,
+  context: renderContext,
   sizing: renderSizing,
   settings: renderSettings,
 };
@@ -716,7 +841,10 @@ async function init() {
           ? ` This also removes the ${record.rows_imported} trades it added.` : '';
         if (!confirm(`Delete ${record?.filename || 'this statement'}?${extra}`)) { return; }
         const result = await api.del(`/api/statements/${id}`);
-        toast(`Deleted. ${plural(result.trades_removed, 'trade')} removed.`, 'success');
+        const removed = result.bars_removed
+          ? `${result.bars_removed.toLocaleString()} bars removed`
+          : `${plural(result.trades_removed, 'trade')} removed`;
+        toast(`Deleted. ${removed}.`, 'success');
         await renderStatements();
         await renderDashboard();
       }
@@ -740,13 +868,27 @@ async function init() {
     if (button.dataset.action === 'import') {
       button.disabled = true;
       const stop = $('#import-stop')?.value;
+      const symbol = $('#import-symbol')?.value;
+      const options = {};
+      if (stop !== '' && stop != null) { options.default_stop_points = Number(stop); }
+      if (symbol) { options.symbol = symbol; }
       try {
         const result = await api.post(`/api/statements/${button.dataset.id}/import`,
-          stop === '' || stop == null ? {} : { default_stop_points: Number(stop) });
+          options);
         closeModal();
-        toast(`Imported ${plural(result.imported, 'trade')}.`, 'success');
-        await renderStatements();
-        await show('dashboard');
+        if (result.kind === 'bars') {
+          toast(`Stored ${result.imported.toLocaleString()} bars for ${result.symbol}.`,
+                'success');
+          await renderStatements();
+          await show('context');
+        } else {
+          const tagged = result.retagged?.tagged || 0;
+          toast(`Imported ${plural(result.imported, 'trade')}`
+            + (tagged ? `, ${plural(tagged, 'trade')} tagged against the bars.` : '.'),
+            'success');
+          await renderStatements();
+          await show('dashboard');
+        }
       } catch (error) {
         toast(error.message, 'error');
         button.disabled = false;

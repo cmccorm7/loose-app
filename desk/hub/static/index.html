@@ -18,6 +18,7 @@
     <button class="nav-item" data-view="statements">Statements<span class="badge" id="nav-statement-count"></span></button>
     <button class="nav-item" data-view="analysis">Analysis</button>
     <button class="nav-item" data-view="behavior">Behavior<span class="badge badge-alert" id="nav-finding-count"></span></button>
+    <button class="nav-item" data-view="context">Market context<span class="badge badge-alert" id="nav-context-count"></span></button>
     <button class="nav-item" data-view="sizing">Position size</button>
     <button class="nav-item" data-view="settings">Settings</button>
     <div class="sidebar-foot">
@@ -69,8 +70,9 @@
       <div class="dropzone" id="dropzone">
         <input type="file" id="file-input" accept=".csv,.txt,.tsv" hidden multiple>
         <p><strong>Drop a statement here</strong> or <button class="link-button" id="browse-button">choose a file</button></p>
-        <p class="muted small">CSV or text. NinjaTrader trade exports, or any trade
-           list with entry time, direction and entry price.</p>
+        <p class="muted small">Trade exports <em>and</em> bar data. NinjaTrader
+           statements, any trade list with entry time / direction / entry price, or a
+           1-minute bar export — the bars are what make the context tags possible.</p>
       </div>
       <div id="statement-list"></div>
     </section>
@@ -121,6 +123,15 @@
       <div id="behavior-body"></div>
     </section>
 
+    <!-- Market context -->
+    <section class="view" id="view-context">
+      <header class="view-head">
+        <h1>Market context</h1>
+        <p class="muted">Your trades read against what price was actually doing.</p>
+      </header>
+      <div id="context-body"></div>
+    </section>
+
     <!-- Sizing -->
     <section class="view" id="view-sizing">
       <header class="view-head">
@@ -154,6 +165,17 @@
           <label>Daily loss limit %<input type="number" id="set-daily" step="0.1"></label>
           <label>Max drawdown %<input type="number" id="set-drawdown" step="0.5"></label>
           <label>Statement timezone<input type="text" id="set-tz" placeholder="America/New_York"></label>
+          <label>Risk per trade, in dollars
+            <input type="number" id="set-riskdollars" step="1" placeholder="leave blank to use the percentage">
+            <span class="hint">For a small account it is easier to think in dollars. This overrides the percentage above.</span>
+          </label>
+          <label>What counts as "at a level"
+            <select id="set-location">
+              <option value="stop_distance">Stop sits beyond the level (risk is structural)</option>
+              <option value="atr_zone">Level is simply nearby (within a fraction of ATR)</option>
+            </select>
+            <span class="hint">Changes how trades are tagged. The underlying measurements do not change, so you can switch freely.</span>
+          </label>
           <label>Default stop distance (points)
             <input type="number" id="set-stop" step="1" placeholder="leave blank for none">
             <span class="hint">Statements rarely record your stop. Without one, trades have no R-multiple.</span>
@@ -165,8 +187,8 @@
       <div class="card narrow">
         <h2>Data folder</h2>
         <p class="muted small" id="data-folder">—</p>
-        <p class="muted small">Your journal, uploaded statements and settings all live
-           here. Nothing is sent anywhere.</p>
+        <p class="muted small">Your journal, market data, uploaded statements and
+           settings all live here. Nothing is sent anywhere.</p>
       </div>
     </section>
   </main>
