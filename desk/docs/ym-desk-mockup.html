@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- YM Desk -- design mockup.
+     Open this file in any browser. Nothing is installed and nothing is sent anywhere.
+     The figures are SIMULATED. Only the Size tab computes from what you type. -->
+<style>
+  :root { color-scheme: dark;
+          padding-top: env(safe-area-inset-top, 0px);
+          padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<title>YM Desk</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Dark-first: this is read at night, at a desk, beside a chart.
+   The profit/loss pair is colour-vision validated in both themes -- red/green
+   is the classic failure and a P&L chart is where it does damage. */
+:root {
+  color-scheme: dark;
+  --ground:#0d1015; --surface:#151a22; --raised:#1c222c; --sunk:#10141a;
+  --line:#242b36; --line-soft:#1b212a;
+  --ink:#e9ecf1; --ink-2:#97a1b0; --ink-3:#626c7a;
+  --pos:#3987e5; --neg:#e66767; --warn:#fab219; --good:#22b455; --crit:#e0564f;
+  --accent:#3987e5;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --ground:#f4f5f7; --surface:#ffffff; --raised:#f7f8fa; --sunk:#eef0f3;
+    --line:#dfe3e9; --line-soft:#eaedf1;
+    --ink:#151a22; --ink-2:#5b6472; --ink-3:#8b94a2;
+    --pos:#2a78d6; --neg:#e34948; --warn:#b97c00; --good:#0f8a3c; --crit:#c8342d;
+    --accent:#2a78d6;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ground:#f4f5f7; --surface:#ffffff; --raised:#f7f8fa; --sunk:#eef0f3;
+  --line:#dfe3e9; --line-soft:#eaedf1;
+  --ink:#151a22; --ink-2:#5b6472; --ink-3:#8b94a2;
+  --pos:#2a78d6; --neg:#e34948; --warn:#b97c00; --good:#0f8a3c; --crit:#c8342d;
+  --accent:#2a78d6;
+}
+
+* { box-sizing:border-box; }
+body { margin:0; background:var(--ground); color:var(--ink);
+       font:15px/1.55 var(--sans); -webkit-font-smoothing:antialiased; }
+h1,h2,h3 { margin:0; text-wrap:balance; letter-spacing:-.011em; }
+h1 { font-size:1.35rem; font-weight:600; }
+h2 { font-size:1rem; font-weight:600; }
+h3 { font-size:.95rem; font-weight:600; }
+p { margin:0; }
+a { color:var(--accent); }
+.mono { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+.dim { color:var(--ink-2); }
+.faint { color:var(--ink-3); }
+.sm { font-size:.82rem; }
+.xs { font-size:.74rem; }
+.pos { color:var(--pos); } .neg { color:var(--neg); }
+
+/* ---- the rail: risk state is chrome, not a page ---------------------- */
+.rail { position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
+        background:var(--surface); border-bottom:1px solid var(--line); }
+.rail-in { max-width:1120px; margin:0 auto; padding:0 20px;
+           display:flex; align-items:center; gap:22px; min-height:58px; flex-wrap:wrap; }
+.brand { display:flex; align-items:baseline; gap:7px; font-weight:600;
+         letter-spacing:-.02em; padding-right:4px; }
+.brand b { color:var(--accent); font-family:var(--mono); font-weight:600; }
+.brand span { color:var(--ink-2); font-weight:500; }
+.gauges { display:flex; gap:20px; flex-wrap:wrap; flex:1; }
+.gauge { display:flex; flex-direction:column; gap:1px; }
+.gauge-k { font:500 .63rem/1 var(--mono); letter-spacing:.09em;
+           text-transform:uppercase; color:var(--ink-3); }
+.gauge-v { font:600 .96rem/1.25 var(--mono); font-variant-numeric:tabular-nums; }
+.lock { font:600 .68rem/1 var(--mono); letter-spacing:.06em; text-transform:uppercase;
+        padding:5px 9px; border-radius:99px; border:1px solid currentColor; }
+.lock.ok { color:var(--good); } .lock.hot { color:var(--crit); }
+.icon-btn { background:none; border:1px solid var(--line); color:var(--ink-2);
+            border-radius:var(--r); padding:5px 9px; cursor:pointer;
+            font:500 .72rem/1 var(--mono); }
+.icon-btn:hover { color:var(--ink); border-color:var(--ink-3); }
+
+/* ---- tabs ------------------------------------------------------------ */
+.tabs { background:var(--surface); border-bottom:1px solid var(--line);
+        position:sticky; top:calc(58px + env(safe-area-inset-top,0px)); z-index:19; }
+.tabs-in { max-width:1120px; margin:0 auto; padding:0 20px; display:flex;
+           gap:2px; overflow-x:auto; scrollbar-width:none; }
+.tabs-in::-webkit-scrollbar { display:none; }
+.tab { background:none; border:0; border-bottom:2px solid transparent;
+       color:var(--ink-3); font:500 .84rem/1 var(--sans); padding:13px 12px;
+       cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:7px; }
+.tab:hover { color:var(--ink-2); }
+.tab[aria-selected="true"] { color:var(--ink); border-bottom-color:var(--accent); }
+.tab .n { font:600 .64rem/1 var(--mono); background:var(--crit); color:#fff;
+          padding:2px 5px; border-radius:99px; }
+
+/* ---- page ------------------------------------------------------------ */
+.wrap { max-width:1120px; margin:0 auto; padding:0 20px; padding-block:26px 72px; }
+.view { display:none; } .view.on { display:block; }
+.head { margin-bottom:20px; display:flex; align-items:baseline;
+        justify-content:space-between; gap:14px; flex-wrap:wrap; }
+.stack { display:flex; flex-direction:column; gap:16px; }
+
+.panel { background:var(--surface); border:1px solid var(--line);
+         border-radius:var(--r); }
+.panel > header { padding:14px 18px; border-bottom:1px solid var(--line-soft);
+                  display:flex; align-items:baseline; justify-content:space-between;
+                  gap:12px; flex-wrap:wrap; }
+.panel > .body { padding:18px; }
+
+/* Figures the page exists for get no card at all -- they sit on the ground,
+   separated by rules, so the panels below read as the detail. */
+.figures { display:grid; grid-template-columns:repeat(auto-fit,minmax(142px,1fr));
+           gap:1px; background:var(--line-soft); border:1px solid var(--line);
+           border-radius:var(--r); overflow:hidden; }
+.fig { background:var(--surface); padding:15px 17px; }
+.fig-k { font:500 .63rem/1 var(--mono); letter-spacing:.09em; text-transform:uppercase;
+         color:var(--ink-3); margin-bottom:7px; }
+.fig-v { font:600 1.5rem/1.1 var(--mono); font-variant-numeric:tabular-nums;
+         letter-spacing:-.02em; }
+.fig-n { font-size:.74rem; color:var(--ink-3); margin-top:4px; }
+
+/* ---- findings: severity is a stripe and a word, never colour alone ---- */
+.find { background:var(--surface); border:1px solid var(--line);
+        border-left:3px solid var(--ink-3); border-radius:var(--r); padding:15px 18px; }
+.find.act { border-left-color:var(--crit); }
+.find.watch { border-left-color:var(--warn); }
+.find-h { display:flex; gap:12px; align-items:baseline; justify-content:space-between;
+          flex-wrap:wrap; margin-bottom:8px; }
+.sev { font:600 .63rem/1 var(--mono); letter-spacing:.1em; text-transform:uppercase;
+       padding:4px 7px; border:1px solid currentColor; border-radius:3px; flex-shrink:0; }
+.sev.act { color:var(--crit); } .sev.watch { color:var(--warn); }
+.sev.info { color:var(--ink-3); }
+.find-d { color:var(--ink-2); font-size:.88rem; }
+.find-s { background:var(--sunk); border-radius:4px; padding:11px 13px;
+          margin-top:11px; font-size:.88rem; }
+.find-m { margin-top:10px; font:400 .72rem/1.4 var(--mono); color:var(--ink-3);
+          display:flex; gap:14px; flex-wrap:wrap; }
+
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { font:500 .74rem/1 var(--mono); background:var(--raised);
+        border:1px solid var(--line); border-radius:4px; padding:6px 9px; }
+.chip b { color:var(--accent); font-weight:600; }
+
+/* ---- tables ---------------------------------------------------------- */
+.scroll { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-family:var(--mono);
+        font-variant-numeric:tabular-nums; font-size:.79rem; }
+th,td { padding:7px 11px; text-align:right; white-space:nowrap; }
+th:first-child,td:first-child { text-align:left; }
+th { font-weight:500; font-size:.63rem; letter-spacing:.09em; text-transform:uppercase;
+     color:var(--ink-3); border-bottom:1px solid var(--line); }
+td { border-bottom:1px solid var(--line-soft); }
+tbody tr:hover td { background:var(--raised); }
+.tag { font-size:.7rem; padding:2px 6px; border-radius:3px; background:var(--raised);
+       border:1px solid var(--line); color:var(--ink-2); }
+
+/* ---- charts ---------------------------------------------------------- */
+.chart svg { display:block; width:100%; height:auto; overflow:visible; }
+.grid { stroke:var(--line-soft); stroke-width:1; }
+.axis { stroke:var(--line); stroke-width:1; }
+.tick { fill:var(--ink-3); font:400 10px var(--mono); }
+.line { fill:none; stroke:var(--pos); stroke-width:2;
+        stroke-linejoin:round; stroke-linecap:round; }
+.area { fill:var(--pos); opacity:.09; }
+.cap { fill:var(--surface); stroke:var(--pos); stroke-width:2; }
+
+/* ---- forms ----------------------------------------------------------- */
+.sizer { display:grid; grid-template-columns:minmax(0,340px) minmax(0,1fr);
+         gap:26px; align-items:start; }
+@media (max-width:720px) { .sizer { grid-template-columns:1fr; gap:18px; } }
+.form { display:grid; gap:13px; }
+label { display:grid; gap:5px; font-size:.82rem; color:var(--ink-2); }
+input,select { font:400 .88rem var(--mono); color:var(--ink); background:var(--sunk);
+               border:1px solid var(--line); border-radius:4px; padding:8px 10px;
+               width:100%; }
+input:focus-visible,select:focus-visible,button:focus-visible,.tab:focus-visible
+  { outline:2px solid var(--accent); outline-offset:1px; }
+.go { background:var(--accent); color:#fff; border:0; border-radius:4px;
+      padding:9px 15px; font:600 .86rem var(--sans); cursor:pointer; justify-self:start; }
+.go:hover { filter:brightness(1.1); }
+.verdict { border:1px solid var(--line); border-left:3px solid var(--good);
+           border-radius:var(--r); padding:13px 15px; background:var(--raised); }
+.verdict.no { border-left-color:var(--crit); }
+
+.note { background:var(--sunk); border-left:2px solid var(--line);
+        padding:11px 14px; border-radius:4px; font-size:.86rem; color:var(--ink-2); }
+.demo { background:var(--surface); border:1px dashed var(--warn); border-radius:var(--r);
+        padding:12px 16px; margin-bottom:20px; font-size:.86rem; }
+.demo b { color:var(--warn); font-family:var(--mono); font-size:.74rem;
+          letter-spacing:.09em; text-transform:uppercase; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; font-size:.75rem; color:var(--ink-3); }
+.sw { display:inline-block; width:9px; height:9px; border-radius:2px;
+      margin-right:5px; vertical-align:baseline; }
+
+@media (max-width:640px) {
+  .rail-in { min-height:auto; padding-block:10px; gap:14px; }
+  .tabs { top:auto; position:static; }
+  .gauges { gap:14px; width:100%; order:3; }
+  .fig-v { font-size:1.28rem; }
+}
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+
+<div class="rail">
+  <div class="rail-in">
+    <div class="brand"><b>YM</b><span>Desk</span></div>
+    <div class="gauges" id="gauges"></div>
+    <span class="lock ok" id="lock">clear</span>
+    <button class="icon-btn" id="theme" type="button">Theme</button>
+  </div>
+</div>
+
+<nav class="tabs"><div class="tabs-in" id="tabs" role="tablist"></div></nav>
+
+<main class="wrap">
+  <div class="demo">
+    <b>Example data</b> &nbsp;These are simulated trades against simulated MYM bars,
+    here so the layout can be judged on something realistic. None of these figures
+    are yours.
+  </div>
+
+  <!-- Dashboard ------------------------------------------------------- -->
+  <section class="view on" id="v-dashboard" role="tabpanel">
+    <div class="head">
+      <h1>Account</h1>
+      <p class="dim sm mono" id="dash-period"></p>
+    </div>
+    <div class="stack">
+      <div class="figures" id="dash-figures"></div>
+      <div class="panel">
+        <header>
+          <div>
+            <h2>Equity</h2>
+            <p class="faint sm">After each closed trade, from the account size in Settings.</p>
+          </div>
+        </header>
+        <div class="body chart" id="c-equity"></div>
+      </div>
+      <div class="panel">
+        <header>
+          <div>
+            <h2>Profit and loss by day</h2>
+            <p class="faint sm">45 trading days.</p>
+          </div>
+          <div class="legend">
+            <span><i class="sw" style="background:var(--pos)"></i>up day</span>
+            <span><i class="sw" style="background:var(--neg)"></i>down day</span>
+          </div>
+        </header>
+        <div class="body chart" id="c-daily"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Market context --------------------------------------------------- -->
+  <section class="view" id="v-context" role="tabpanel">
+    <div class="head">
+      <h1>Market context</h1>
+      <p class="dim sm">Every trade read against the bars around it.</p>
+    </div>
+    <div class="stack">
+      <div class="figures" id="ctx-figures"></div>
+      <div id="ctx-findings" class="stack"></div>
+      <div class="panel">
+        <header>
+          <div>
+            <h2>Tagged trades</h2>
+            <p class="faint sm">Most recent 36. Stop/bar under 1.00 means the stop was
+              smaller than a typical five-minute bar.</p>
+          </div>
+        </header>
+        <div class="body scroll"><table id="t-tagged"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Behavior --------------------------------------------------------- -->
+  <section class="view" id="v-behavior" role="tabpanel">
+    <div class="head">
+      <h1>Behavior</h1>
+      <p class="dim sm">Patterns in how you trade, not what you trade.</p>
+    </div>
+    <div class="stack">
+      <div class="panel">
+        <header>
+          <div>
+            <h2>Suggested guardrails</h2>
+            <p class="faint sm">Merged from the findings below. A guardrail you do not
+              believe in will not hold.</p>
+          </div>
+        </header>
+        <div class="body"><div class="chips" id="guardrails"></div></div>
+      </div>
+      <div id="beh-findings" class="stack"></div>
+      <p class="faint sm" id="beh-foot"></p>
+    </div>
+  </section>
+
+  <!-- Analysis --------------------------------------------------------- -->
+  <section class="view" id="v-analysis" role="tabpanel">
+    <div class="head">
+      <h1>Analysis</h1>
+      <p class="dim sm">Where the money comes from.</p>
+    </div>
+    <div class="stack">
+      <div class="panel">
+        <header>
+          <div>
+            <h2>Expectancy by hour</h2>
+            <p class="faint sm">Average R per trade. Above the line is positive.</p>
+          </div>
+          <label style="max-width:170px">
+            <select id="group">
+              <option value="byHour">Hour of day</option>
+              <option value="bySetup">Setup</option>
+            </select>
+          </label>
+        </header>
+        <div class="body chart" id="c-group"></div>
+        <div class="body scroll" style="border-top:1px solid var(--line-soft)">
+          <table id="t-group"></table>
+        </div>
+      </div>
+      <div class="panel">
+        <header><div><h2>Recent trades</h2></div></header>
+        <div class="body scroll"><table id="t-trades"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Data ------------------------------------------------------------- -->
+  <section class="view" id="v-data" role="tabpanel">
+    <div class="head">
+      <h1>Data</h1>
+      <p class="dim sm">Statements and market bars. Nothing is stored until you say so.</p>
+    </div>
+    <div class="stack">
+      <div class="panel">
+        <header><div><h2>Imported</h2></div></header>
+        <div class="body scroll"><table id="t-statements"></table></div>
+      </div>
+      <div class="panel">
+        <header>
+          <div>
+            <h2>Market data</h2>
+            <p class="faint sm">Bars are what make the context tags possible.</p>
+          </div>
+        </header>
+        <div class="body scroll"><table id="t-bars"></table></div>
+      </div>
+      <p class="note">Import previews before it commits: the format detected, the first
+        rows as the parser read them, any rows it could not read, and whether the file
+        duplicates one already imported. A misread statement is far easier to reject
+        than to unpick afterwards.</p>
+    </div>
+  </section>
+
+  <!-- Size ------------------------------------------------------------- -->
+  <section class="view" id="v-size" role="tabpanel">
+    <div class="head">
+      <h1>Position size</h1>
+      <p class="dim sm">You choose what the trade may cost. The stop decides how many
+        contracts that buys.</p>
+    </div>
+    <div class="stack">
+      <div class="panel">
+        <div class="body">
+          <div class="sizer">
+          <form class="form" id="sizer">
+            <label for="s-sym">Contract
+              <select id="s-sym">
+                <option value="MYM">MYM &mdash; Micro E-mini Dow ($0.50/pt)</option>
+                <option value="YM">YM &mdash; E-mini Dow ($5.00/pt)</option>
+              </select>
+            </label>
+            <label for="s-risk">Risk per trade, dollars
+              <input type="number" id="s-risk" value="10" step="1" min="1">
+            </label>
+            <label for="s-entry">Entry
+              <input type="number" id="s-entry" value="41000" step="1">
+            </label>
+            <label for="s-stop">Stop
+              <input type="number" id="s-stop" value="40980" step="1">
+            </label>
+            <button class="go" type="submit">Check this trade</button>
+          </form>
+          <div id="s-out"></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">A twenty-point stop on MYM is ten dollars, and smaller than a
+        typical five-minute bar. That is fine directly under a level that has held, where
+        being stopped means the level broke. In open price it is a coin flip on noise.</p>
+    </div>
+  </section>
+
+  <!-- Settings --------------------------------------------------------- -->
+  <section class="view" id="v-settings" role="tabpanel">
+    <div class="head">
+      <h1>Settings</h1>
+      <p class="dim sm">Stored in your data folder, beside the journal.</p>
+    </div>
+    <div class="panel">
+      <div class="body">
+        <div class="form">
+          <label for="g-sym">Default contract
+            <select id="g-sym"><option>MYM</option><option>YM</option></select>
+          </label>
+          <label for="g-eq">Account equity<input type="number" id="g-eq" value="2000"></label>
+          <label for="g-risk">Risk per trade, dollars<input type="number" id="g-risk" value="10"></label>
+          <label for="g-stop">Default stop distance, points<input type="number" id="g-stop" value="20"></label>
+          <label for="g-tz">Statement timezone<input type="text" id="g-tz" value="America/New_York"></label>
+          <label for="g-loc">What counts as &ldquo;at a level&rdquo;
+            <select id="g-loc">
+              <option>Stop sits beyond the level</option>
+              <option>Level is simply nearby</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="application/json" id="demo-data">{"period":{"first":"2026-05-01T12:10:00-04:00","last":"2026-07-02T10:45:00-04:00"},"tradeCount":135,"metrics":{"net_pnl":202.0,"commission":135.0,"expectancy_r":0.14962962962962964,"expectancy":1.4962962962962962,"win_rate":32.592592592592595,"wins":44,"losses":91,"profit_factor":1.184981684981685,"max_drawdown":239.5,"max_drawdown_pct":9.80954331353676,"max_consecutive_losses":8,"avg_win":29.40909090909091,"avg_loss":-12.0,"trading_days":45,"starting_equity":2000,"final_equity":2202.0,"return_pct":10.1,"sharpe":1.9156473335463051,"avg_duration_minutes":31.91176470588235},"equity":[{"i":0,"v":2000},{"i":1,"v":1988.0},{"i":2,"v":2006.5},{"i":3,"v":1994.5},{"i":4,"v":1982.5},{"i":5,"v":2001.0},{"i":6,"v":2019.5},{"i":7,"v":2007.5},{"i":8,"v":1995.5},{"i":9,"v":2014.0},{"i":10,"v":2032.5},{"i":11,"v":2111.0},{"i":12,"v":2099.0},{"i":13,"v":2087.0},{"i":14,"v":2105.5},{"i":15,"v":2093.5},{"i":16,"v":2172.0},{"i":17,"v":2160.0},{"i":18,"v":2148.0},{"i":19,"v":2136.0},{"i":20,"v":2124.0},{"i":21,"v":2112.0},{"i":22,"v":2100.0},{"i":23,"v":2118.5},{"i":24,"v":2137.0},{"i":25,"v":2155.5},{"i":26,"v":2143.5},{"i":27,"v":2162.0},{"i":28,"v":2150.0},{"i":29,"v":2138.0},{"i":30,"v":2126.0},{"i":31,"v":2144.5},{"i":32,"v":2223.0},{"i":33,"v":2211.0},{"i":34,"v":2199.0},{"i":35,"v":2187.0},{"i":36,"v":2175.0},{"i":37,"v":2193.5},{"i":38,"v":2181.5},{"i":39,"v":2200.0},{"i":40,"v":2188.0},{"i":41,"v":2176.0},{"i":42,"v":2254.5},{"i":43,"v":2333.0},{"i":44,"v":2321.0},{"i":45,"v":2309.0},{"i":46,"v":2297.0},{"i":47,"v":2285.0},{"i":48,"v":2273.0},{"i":49,"v":2291.5},{"i":50,"v":2279.5},{"i":51,"v":2298.0},{"i":52,"v":2286.0},{"i":53,"v":2274.0},{"i":54,"v":2262.0},{"i":55,"v":2280.5},{"i":56,"v":2268.5},{"i":57,"v":2256.5},{"i":58,"v":2275.0},{"i":59,"v":2263.0},{"i":60,"v":2281.5},{"i":61,"v":2269.5},{"i":62,"v":2288.0},{"i":63,"v":2306.5},{"i":64,"v":2325.0},{"i":65,"v":2313.0},{"i":66,"v":2301.0},{"i":67,"v":2289.0},{"i":68,"v":2307.5},{"i":69,"v":2295.5},{"i":70,"v":2283.5},{"i":71,"v":2362.0},{"i":72,"v":2350.0},{"i":73,"v":2338.0},{"i":74,"v":2326.0},{"i":75,"v":2344.5},{"i":76,"v":2363.0},{"i":77,"v":2441.5},{"i":78,"v":2429.5},{"i":79,"v":2417.5},{"i":80,"v":2405.5},{"i":81,"v":2424.0},{"i":82,"v":2412.0},{"i":83,"v":2400.0},{"i":84,"v":2388.0},{"i":85,"v":2406.5},{"i":86,"v":2425.0},{"i":87,"v":2413.0},{"i":88,"v":2401.0},{"i":89,"v":2389.0},{"i":90,"v":2377.0},{"i":91,"v":2365.0},{"i":92,"v":2353.0},{"i":93,"v":2341.0},{"i":94,"v":2359.5},{"i":95,"v":2347.5},{"i":96,"v":2366.0},{"i":97,"v":2354.0},{"i":98,"v":2342.0},{"i":99,"v":2330.0},{"i":100,"v":2318.0},{"i":101,"v":2336.5},{"i":102,"v":2324.5},{"i":103,"v":2312.5},{"i":104,"v":2300.5},{"i":105,"v":2288.5},{"i":106,"v":2307.0},{"i":107,"v":2295.0},{"i":108,"v":2313.5},{"i":109,"v":2301.5},{"i":110,"v":2380.0},{"i":111,"v":2368.0},{"i":112,"v":2356.0},{"i":113,"v":2344.0},{"i":114,"v":2332.0},{"i":115,"v":2320.0},{"i":116,"v":2308.0},{"i":117,"v":2296.0},{"i":118,"v":2284.0},{"i":119,"v":2302.5},{"i":120,"v":2290.5},{"i":121,"v":2278.5},{"i":122,"v":2266.5},{"i":123,"v":2254.5},{"i":124,"v":2242.5},{"i":125,"v":2230.5},{"i":126,"v":2249.0},{"i":127,"v":2237.0},{"i":128,"v":2225.0},{"i":129,"v":2213.0},{"i":130,"v":2231.5},{"i":131,"v":2219.5},{"i":132,"v":2238.0},{"i":133,"v":2226.0},{"i":134,"v":2214.0},{"i":135,"v":2202.0}],"daily":[{"d":"2026-05-01","v":-5.5},{"d":"2026-05-04","v":25.0},{"d":"2026-05-05","v":-5.5},{"d":"2026-05-06","v":85.0},{"d":"2026-05-07","v":-5.5},{"d":"2026-05-08","v":54.5},{"d":"2026-05-11","v":-36.0},{"d":"2026-05-12","v":25.0},{"d":"2026-05-13","v":25.0},{"d":"2026-05-14","v":-36.0},{"d":"2026-05-15","v":85.0},{"d":"2026-05-18","v":-36.0},{"d":"2026-05-19","v":25.0},{"d":"2026-05-20","v":54.5},{"d":"2026-05-21","v":54.5},{"d":"2026-05-22","v":-36.0},{"d":"2026-05-25","v":25.0},{"d":"2026-05-26","v":-36.0},{"d":"2026-05-27","v":-5.5},{"d":"2026-05-28","v":25.0},{"d":"2026-05-29","v":25.0},{"d":"2026-06-01","v":-5.5},{"d":"2026-06-02","v":-5.5},{"d":"2026-06-03","v":54.5},{"d":"2026-06-04","v":-5.5},{"d":"2026-06-05","v":85.0},{"d":"2026-06-08","v":-5.5},{"d":"2026-06-09","v":-36.0},{"d":"2026-06-10","v":25.0},{"d":"2026-06-11","v":-36.0},{"d":"2026-06-12","v":-36.0},{"d":"2026-06-15","v":25.0},{"d":"2026-06-16","v":-36.0},{"d":"2026-06-17","v":-5.5},{"d":"2026-06-18","v":-36.0},{"d":"2026-06-19","v":25.0},{"d":"2026-06-22","v":54.5},{"d":"2026-06-23","v":-36.0},{"d":"2026-06-24","v":-36.0},{"d":"2026-06-25","v":-5.5},{"d":"2026-06-26","v":-36.0},{"d":"2026-06-29","v":-5.5},{"d":"2026-06-30","v":-36.0},{"d":"2026-07-01","v":25.0},{"d":"2026-07-02","v":-36.0}],"byHour":[{"name":"09:00","trades":32,"win_rate":28.1,"net_pnl":10.5,"expectancy":0.33,"expectancy_r":0.033,"profit_factor":1.04},{"name":"10:00","trades":57,"win_rate":35.1,"net_pnl":106.0,"expectancy":1.86,"expectancy_r":0.186,"profit_factor":1.24},{"name":"11:00","trades":36,"win_rate":33.3,"net_pnl":114.0,"expectancy":3.17,"expectancy_r":0.317,"profit_factor":1.4},{"name":"12:00","trades":7,"win_rate":42.9,"net_pnl":7.5,"expectancy":1.07,"expectancy_r":0.107,"profit_factor":1.16},{"name":"13:00","trades":1,"win_rate":0.0,"net_pnl":-12.0,"expectancy":-12.0,"expectancy_r":-1.2,"profit_factor":0.0},{"name":"14:00","trades":1,"win_rate":0.0,"net_pnl":-12.0,"expectancy":-12.0,"expectancy_r":-1.2,"profit_factor":0.0},{"name":"15:00","trades":1,"win_rate":0.0,"net_pnl":-12.0,"expectancy":-12.0,"expectancy_r":-1.2,"profit_factor":0.0}],"bySetup":[{"name":"at-level","trades":17,"win_rate":41.2,"net_pnl":129.5,"expectancy":7.62,"expectancy_r":0.762,"profit_factor":2.08},{"name":"chase","trades":72,"win_rate":29.2,"net_pnl":76.5,"expectancy":1.06,"expectancy_r":0.106,"profit_factor":1.12},{"name":"fade-above-floor","trades":46,"win_rate":34.8,"net_pnl":-4.0,"expectancy":-0.09,"expectancy_r":-0.009,"profit_factor":0.99}],"behavior":{"findings":[{"code":"stop_discipline","severity":"act","headline":"100% of your losses ran past the stop you planned","detail":"91 of 91 losing trades lost more than 1.15R; the average loser is -1.20R and the worst was -1.20R. Either the stop is being moved as price approaches it, or it is a mental stop that is not resting in the market.","suggestion":"Submit the protective stop as a resting order in the same action as the entry, so honoring it is not a decision you make later. If the overshoot is genuinely slippage, move the stop off the obvious round number and widen it a few ticks -- then take the smaller size that implies.","sample":91,"confidence":"strong","effect":1.0,"effect_unit":" of losers","p_value":null},{"code":"weekday","severity":"watch","headline":"Weekday Tuesday is your worst bucket","detail":"Weekday Tuesday averages -0.52R over 27 trades, against +0.32R elsewhere. All buckets: {'Friday': 0.596, 'Monday': 0.152, 'Thursday': -0.3, 'Tuesday': -0.522, 'Wednesday': 0.822}","suggestion":"Before dropping it, check the sample -- 27 trades is a thin basis. If it holds up over another month, stop trading Tuesday or halve size there.","sample":27,"confidence":"moderate","effect":-0.8398148148148148,"effect_unit":null,"p_value":0.07918466497213172},{"code":"direction_bias","severity":"info","headline":"Direction short is your worst bucket","detail":"Direction short averages -0.01R over 46 trades, against +0.23R elsewhere. All buckets: {'long': 0.231, 'short': -0.009}","suggestion":"Before dropping it, check the sample -- 46 trades is a thin basis. If it holds up over another month, stop trading short or halve size there.","sample":46,"confidence":"low","effect":-0.2401563263312164,"effect_unit":null,"p_value":1.0},{"code":"setup_leak","severity":"info","headline":"Setup fade-above-floor is your worst bucket","detail":"Setup fade-above-floor averages -0.01R over 46 trades, against +0.23R elsewhere. All buckets: {'at-level': 0.762, 'chase': 0.106, 'fade-above-floor': -0.009}","suggestion":"Before dropping it, check the sample -- 46 trades is a thin basis. If it holds up over another month, stop trading fade-above-floor or halve size there.","sample":46,"confidence":"low","effect":-0.2401563263312164,"effect_unit":null,"p_value":1.0},{"code":"ordinal_decay","severity":"info","headline":"Your first 2 trade(s) each day make money; everything after them loses it","detail":"Trades 1-2 average +0.25R over 90 trades. Trade 3 onward averages -0.05R over 45 trades -- a swing of -0.30R per trade. Per-ordinal averages: {1: 0.083, 2: 0.416, 3: -0.05}","suggestion":"Cap the day at 2 trade(s). Set max_trades_per_day=2 so the decision is made before the session starts, not after two losses.","sample":45,"confidence":"low","effect":-0.2994444444444444,"effect_unit":null,"p_value":0.8806875068205091},{"code":"revenge_window","severity":"info","headline":"Re-entering within 30 minutes of a loss costs you","detail":"Trades taken inside 30 minutes of a losing exit average +0.13R (25 trades) against +0.15R for everything else (110 trades).","suggestion":"Enforce a 30-minute cooldown after any loss. The RiskManager can hold the lockout for you so it is not a decision you make while annoyed.","sample":25,"confidence":"low","effect":-0.019181818181818217,"effect_unit":null,"p_value":0.9731427864644651},{"code":"loss_streak","severity":"info","headline":"Trading on after 2 straight losses makes it worse","detail":"Trades taken while already down 2+ in a row average -0.14R (20 trades) versus +0.20R otherwise (115 trades).","suggestion":"Stop for the day at 2 consecutive losses. Set max_consecutive_losses=2 with consecutive_loss_action='lock_day'.","sample":20,"confidence":"low","effect":-0.33706521739130435,"effect_unit":null,"p_value":0.540508664134824},{"code":"time_of_day_decay","severity":"info","headline":"Everything you trade from 12:00 onward loses money","detail":"Before 12:00 you average +0.18R (125 trades). From 12:00 you average -0.28R (10 trades). By hour: {'09:00': 0.033, '10:00': 0.186, '11:00': 0.317, '12:00': 0.107, '13:00': -1.2, '14:00': -1.2, '15:00': -1.2}","suggestion":"Set a hard stop time of 12:00 ET -- flatten, close the platform, and let the afternoon go. Treat it as a rule, not a preference you renegotiate at 12:05.","sample":10,"confidence":"low","effect":-0.46940000000000004,"effect_unit":null,"p_value":1.0}],"guardrails":{},"unit":"R","trades":135,"days":45},"context":{"headline":{"at a held level":"10/135","stop vs a 5-min bar":"0.38x","share of the move taken":"40%"},"findings":[{"code":"stop_vs_volatility","severity":"act","headline":"Your stop is smaller than a typical bar (0.38x the 5-minute range)","detail":"Across 135 trades the median stop was 0.38 times the median 5-minute bar range and 0.26 x ATR. 91 of 135 trades ended at the stop. A stop inside the noise gets hit whether or not the read was right, so those stop-outs carry almost no information about your entries.","suggestion":"Two ways out, and only two. Either place the stop where being hit means something -- beyond a level that is holding, which is what the location tag measures -- or take fewer, better trades so the risk per trade can be wider. Widening the stop without widening the account just means the same dollars lost more slowly.","sample":135,"confidence":"strong","effect":0.38461538461538464,"effect_unit":"x bar range","p_value":null},{"code":"structural_risk","severity":"act","headline":"Only 7% of your stops sat beyond a level that was holding","detail":"10 of 135 trades placed the stop past a level with at least two holds behind it. Those that were average +0.93R; the rest +0.09R. The rest were risking a fixed distance into open price.","suggestion":"Make the level the reason for the stop, not the number. If no level is close enough for your risk to sit beyond it, that is the setup telling you it is not your trade.","sample":135,"confidence":"strong","effect":0.07407407407407407,"effect_unit":" structural","p_value":null},{"code":"early_exits","severity":"act","headline":"You take about 40% of the move on your winners","detail":"26 of 44 winning trades were followed by at least as much again within the hour -- a median 122 further points. Median capture across all winners was 40%.","suggestion":"A fixed target cannot know how big the move is. Try the rule you already described: stop to breakeven once it has paid for itself, then trail under each new 5-minute higher low, and let the market decide the exit. Backtest it before adopting it -- trailing gives back some winners in exchange for the large ones.","sample":44,"confidence":"strong","effect":0.4020618556701031,"effect_unit":" of the move","p_value":null},{"code":"rule_adherence","severity":"watch","headline":"1% of your trades were the setup you say you trade","detail":"1 of 135 trades were the setup as you describe it: long, at a level that had held, with the 5-minute structure already turned up. Another 5 were long at a level but before that confirmation, and 129 were something else.","suggestion":"The gap between the rule and the trades is the thing to close first -- no amount of tuning helps a rule you are not taking. If the on-rule trades are too few to judge, that is the finding: the setup is rarer than the urge to trade.","sample":135,"confidence":"moderate","effect":0.007407407407407408,"effect_unit":" on-rule","p_value":null},{"code":"fighting_levels","severity":"watch","headline":"38 shorts taken above a floor that was holding","detail":"38 trades were shorts taken above a floor that had already held at least twice, averaging -0.08R. The rest of the book averages +0.24R. This is the pattern you named: wanting to be short while price is ranging above a level it keeps refusing to break.","suggestion":"Make it mechanical rather than a matter of willpower: if a support level below you has two or more holds and has not broken, shorts are off. The level breaking is the signal, not your read of it.","sample":38,"confidence":"moderate","effect":-0.07894736842105259,"effect_unit":null,"p_value":null},{"code":"chasing","severity":"info","headline":"Entering after the move has already run costs you","detail":"Trades entered more than a full move from the last swing average +0.01R over 78 trades, against +0.34R for the rest (57).","suggestion":"The cost of chasing is the stop: by the time you are in, the level that would justify your risk is far behind you. Wait for the pullback or let it go -- there is another one.","sample":78,"confidence":"low","effect":-0.3376855600539811,"effect_unit":null,"p_value":0.4190340072128169},{"code":"trend_alignment","severity":"info","headline":"Counter-trend entries are holding up","detail":"Against the trend: +0.27R over 33 trades. With it: +0.22R over 49. Buying a level that is holding is counter-trend by construction -- price has to be falling to reach support -- so read this next to the location finding rather than on its own.","suggestion":"If the counter-trend trades that lose are also the ones away from a level, the problem is location, not direction. Your own rule already handles this: wait for the higher high and higher low that says the floor turned it.","sample":33,"confidence":"low","effect":0.051298701298701316,"effect_unit":null,"p_value":0.9298017622847969},{"code":"location_edge","severity":"info","headline":"Trades at a held level do better than the rest","detail":"At a level: +0.93R over 10 trades. Everywhere else: +0.09R over 125. That is the setup you say you want to trade, and the numbers back it.","suggestion":"Take only the trades where a level is close enough for the stop to sit beyond it, and skip the rest.","sample":10,"confidence":"low","effect":0.8374,"effect_unit":null,"p_value":0.36779702077224097}],"unit":"R","analysed":135},"tagged":[{"session_day":"2026-06-17","entry_time":"2026-06-17T09:50:00-04:00","direction":"long","trend":"up","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.37037037037037035,"capture_ratio":null,"level_rejections":6,"with_trend":true},{"session_day":"2026-06-17","entry_time":"2026-06-17T10:40:00-04:00","direction":"short","trend":"down","location":"mid_range","exit_quality":"rode","stop_vs_bar":0.37037037037037035,"capture_ratio":0.75,"level_rejections":0,"with_trend":true},{"session_day":"2026-06-17","entry_time":"2026-06-17T11:15:00-04:00","direction":"long","trend":"range","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.37037037037037035,"capture_ratio":null,"level_rejections":2,"with_trend":null},{"session_day":"2026-06-18","entry_time":"2026-06-18T09:55:00-04:00","direction":"long","trend":"range","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.38461538461538464,"capture_ratio":null,"level_rejections":2,"with_trend":null},{"session_day":"2026-06-18","entry_time":"2026-06-18T10:25:00-04:00","direction":"long","trend":"up","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.38461538461538464,"capture_ratio":null,"level_rejections":2,"with_trend":true},{"session_day":"2026-06-18","entry_time":"2026-06-18T11:00:00-04:00","direction":"long","trend":"range","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.38461538461538464,"capture_ratio":null,"level_rejections":2,"with_trend":null},{"session_day":"2026-06-19","entry_time":"2026-06-19T10:00:00-04:00","direction":"short","trend":"range","location":"mid_range","exit_quality":"early","stop_vs_bar":0.47619047619047616,"capture_ratio":0.47560975609756095,"level_rejections":2,"with_trend":null},{"session_day":"2026-06-19","entry_time":"2026-06-19T11:15:00-04:00","direction":"long","trend":"up","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.47619047619047616,"capture_ratio":null,"level_rejections":2,"with_trend":true},{"session_day":"2026-06-19","entry_time":"2026-06-19T11:50:00-04:00","direction":"long","trend":"up","location":"chasing","exit_quality":"early","stop_vs_bar":0.47619047619047616,"capture_ratio":0.4105263157894737,"level_rejections":2,"with_trend":true},{"session_day":"2026-06-22","entry_time":"2026-06-22T09:35:00-04:00","direction":"long","trend":"up","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.32,"capture_ratio":null,"level_rejections":0,"with_trend":true},{"session_day":"2026-06-22","entry_time":"2026-06-22T10:05:00-04:00","direction":"long","trend":"up","location":"chasing","exit_quality":"rode","stop_vs_bar":0.32,"capture_ratio":0.6824034334763949,"level_rejections":2,"with_trend":true},{"session_day":"2026-06-22","entry_time":"2026-06-22T10:40:00-04:00","direction":"long","trend":"up","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.32,"capture_ratio":null,"level_rejections":0,"with_trend":true},{"session_day":"2026-06-23","entry_time":"2026-06-23T09:35:00-04:00","direction":"short","trend":"range","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.4,"capture_ratio":null,"level_rejections":0,"with_trend":null},{"session_day":"2026-06-23","entry_time":"2026-06-23T10:05:00-04:00","direction":"short","trend":"down","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.4,"capture_ratio":null,"level_rejections":0,"with_trend":true},{"session_day":"2026-06-23","entry_time":"2026-06-23T15:20:00-04:00","direction":"long","trend":"up","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.4,"capture_ratio":null,"level_rejections":6,"with_trend":true},{"session_day":"2026-06-24","entry_time":"2026-06-24T09:35:00-04:00","direction":"short","trend":"range","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.3252032520325203,"capture_ratio":null,"level_rejections":0,"with_trend":null},{"session_day":"2026-06-24","entry_time":"2026-06-24T10:25:00-04:00","direction":"long","trend":"range","location":"at_level","exit_quality":"stopped","stop_vs_bar":0.3252032520325203,"capture_ratio":null,"level_rejections":3,"with_trend":null},{"session_day":"2026-06-24","entry_time":"2026-06-24T11:00:00-04:00","direction":"short","trend":"range","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.3252032520325203,"capture_ratio":null,"level_rejections":3,"with_trend":null},{"session_day":"2026-06-25","entry_time":"2026-06-25T09:40:00-04:00","direction":"short","trend":"up","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.37037037037037035,"capture_ratio":null,"level_rejections":5,"with_trend":false},{"session_day":"2026-06-25","entry_time":"2026-06-25T10:15:00-04:00","direction":"short","trend":"range","location":"mid_range","exit_quality":"rode","stop_vs_bar":0.37037037037037035,"capture_ratio":0.639344262295082,"level_rejections":6,"with_trend":null},{"session_day":"2026-06-25","entry_time":"2026-06-25T10:55:00-04:00","direction":"long","trend":"range","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.37037037037037035,"capture_ratio":null,"level_rejections":6,"with_trend":null},{"session_day":"2026-06-26","entry_time":"2026-06-26T09:40:00-04:00","direction":"long","trend":"down","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.39215686274509803,"capture_ratio":null,"level_rejections":2,"with_trend":false},{"session_day":"2026-06-26","entry_time":"2026-06-26T10:10:00-04:00","direction":"long","trend":"down","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.39215686274509803,"capture_ratio":null,"level_rejections":2,"with_trend":false},{"session_day":"2026-06-26","entry_time":"2026-06-26T11:05:00-04:00","direction":"long","trend":"range","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.39215686274509803,"capture_ratio":null,"level_rejections":2,"with_trend":null},{"session_day":"2026-06-29","entry_time":"2026-06-29T09:40:00-04:00","direction":"long","trend":"range","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.38461538461538464,"capture_ratio":null,"level_rejections":0,"with_trend":null},{"session_day":"2026-06-29","entry_time":"2026-06-29T10:45:00-04:00","direction":"short","trend":"down","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.38461538461538464,"capture_ratio":null,"level_rejections":4,"with_trend":true},{"session_day":"2026-06-29","entry_time":"2026-06-29T11:20:00-04:00","direction":"short","trend":"range","location":"mid_range","exit_quality":"rode","stop_vs_bar":0.38461538461538464,"capture_ratio":0.639344262295082,"level_rejections":5,"with_trend":null},{"session_day":"2026-06-30","entry_time":"2026-06-30T09:35:00-04:00","direction":"short","trend":"down","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.36363636363636365,"capture_ratio":null,"level_rejections":2,"with_trend":true},{"session_day":"2026-06-30","entry_time":"2026-06-30T10:20:00-04:00","direction":"long","trend":"down","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.36363636363636365,"capture_ratio":null,"level_rejections":9,"with_trend":false},{"session_day":"2026-06-30","entry_time":"2026-06-30T10:55:00-04:00","direction":"short","trend":"range","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.36363636363636365,"capture_ratio":null,"level_rejections":3,"with_trend":null},{"session_day":"2026-07-01","entry_time":"2026-07-01T10:45:00-04:00","direction":"long","trend":"down","location":"chasing","exit_quality":"rode","stop_vs_bar":0.45454545454545453,"capture_ratio":0.5416666666666666,"level_rejections":5,"with_trend":false},{"session_day":"2026-07-01","entry_time":"2026-07-01T11:35:00-04:00","direction":"long","trend":"range","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.45454545454545453,"capture_ratio":null,"level_rejections":5,"with_trend":null},{"session_day":"2026-07-01","entry_time":"2026-07-01T12:15:00-04:00","direction":"long","trend":"down","location":"chasing","exit_quality":"early","stop_vs_bar":0.45454545454545453,"capture_ratio":0.4020618556701031,"level_rejections":3,"with_trend":false},{"session_day":"2026-07-02","entry_time":"2026-07-02T09:40:00-04:00","direction":"long","trend":"up","location":"chasing","exit_quality":"stopped","stop_vs_bar":0.35714285714285715,"capture_ratio":null,"level_rejections":3,"with_trend":true},{"session_day":"2026-07-02","entry_time":"2026-07-02T10:10:00-04:00","direction":"long","trend":"range","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.35714285714285715,"capture_ratio":null,"level_rejections":3,"with_trend":null},{"session_day":"2026-07-02","entry_time":"2026-07-02T10:45:00-04:00","direction":"long","trend":"range","location":"mid_range","exit_quality":"stopped","stop_vs_bar":0.35714285714285715,"capture_ratio":null,"level_rejections":4,"with_trend":null}],"trades":[{"session_day":"2026-06-23","entry_time":"2026-06-23T09:35:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":44710.0,"exit_price":44732.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"fade-above-floor"},{"session_day":"2026-06-23","entry_time":"2026-06-23T10:05:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":44499.0,"exit_price":44521.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"fade-above-floor"},{"session_day":"2026-06-23","entry_time":"2026-06-23T15:20:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44506.0,"exit_price":44484.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-06-24","entry_time":"2026-06-24T09:35:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":44599.0,"exit_price":44621.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"fade-above-floor"},{"session_day":"2026-06-24","entry_time":"2026-06-24T10:25:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44545.0,"exit_price":44523.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"at-level"},{"session_day":"2026-06-24","entry_time":"2026-06-24T11:00:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":44624.0,"exit_price":44646.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"fade-above-floor"},{"session_day":"2026-06-25","entry_time":"2026-06-25T09:40:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":44203.0,"exit_price":44225.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"fade-above-floor"},{"session_day":"2026-06-25","entry_time":"2026-06-25T10:15:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":44236.0,"exit_price":44197.0,"net_pnl":18.5,"r_multiple":1.85,"setup":"fade-above-floor"},{"session_day":"2026-06-25","entry_time":"2026-06-25T10:55:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44288.0,"exit_price":44266.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-06-26","entry_time":"2026-06-26T09:40:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":43878.0,"exit_price":43856.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-06-26","entry_time":"2026-06-26T10:10:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44030.0,"exit_price":44008.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-06-26","entry_time":"2026-06-26T11:05:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44073.0,"exit_price":44051.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-06-29","entry_time":"2026-06-29T09:40:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":43936.0,"exit_price":43914.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-06-29","entry_time":"2026-06-29T10:45:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":43893.0,"exit_price":43915.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"fade-above-floor"},{"session_day":"2026-06-29","entry_time":"2026-06-29T11:20:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":43886.0,"exit_price":43847.0,"net_pnl":18.5,"r_multiple":1.85,"setup":"fade-above-floor"},{"session_day":"2026-06-30","entry_time":"2026-06-30T09:35:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":43975.0,"exit_price":43997.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"fade-above-floor"},{"session_day":"2026-06-30","entry_time":"2026-06-30T10:20:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":43845.0,"exit_price":43823.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"at-level"},{"session_day":"2026-06-30","entry_time":"2026-06-30T10:55:00-04:00","symbol":"MYM","direction":"short","contracts":1,"entry_price":43910.0,"exit_price":43932.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"fade-above-floor"},{"session_day":"2026-07-01","entry_time":"2026-07-01T10:45:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44097.0,"exit_price":44136.0,"net_pnl":18.5,"r_multiple":1.85,"setup":"chase"},{"session_day":"2026-07-01","entry_time":"2026-07-01T11:35:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44140.0,"exit_price":44118.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-07-01","entry_time":"2026-07-01T12:15:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44148.0,"exit_price":44187.0,"net_pnl":18.5,"r_multiple":1.85,"setup":"chase"},{"session_day":"2026-07-02","entry_time":"2026-07-02T09:40:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44508.0,"exit_price":44486.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-07-02","entry_time":"2026-07-02T10:10:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44535.0,"exit_price":44513.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"chase"},{"session_day":"2026-07-02","entry_time":"2026-07-02T10:45:00-04:00","symbol":"MYM","direction":"long","contracts":1,"entry_price":44351.0,"exit_price":44329.0,"net_pnl":-12.0,"r_multiple":-1.2,"setup":"at-level"}],"bars":{"symbols":[{"symbol":"MYM","timeframes":[1],"first":"2026-05-01T09:30:00-04:00","last":"2026-07-02T15:59:00-04:00","bars":17550,"days":45}],"total_bars":17550,"trades_with_context":135,"trades_without_context":0},"statements":[{"filename":"NinjaTrader_Trades.csv","kind":"trades","status":"imported","rows_imported":135,"period":{"first":"2026-05-01T12:10:00-04:00","last":"2026-07-02T10:45:00-04:00","days":45}},{"filename":"MYM_1min_export.txt","kind":"bars","status":"imported","rows_imported":17550,"period":{"first":"2026-05-01T09:30:00-04:00","last":"2026-07-02T15:59:00-04:00"}}],"settings":{"symbol":"MYM","equity":2000,"timezone":"America/New_York","risk_per_trade_pct":0.5,"max_daily_loss_pct":2.0,"max_drawdown_pct":10.0,"default_stop_points":20.0,"location_mode":"stop_distance","fixed_dollar_risk":10.0,"ai_share_mode":"ask"}}</script>
+<script>
+const D = JSON.parse(document.getElementById("demo-data").textContent);
+const $ = (s) => document.querySelector(s);
+const el = (t, a = {}) => { const n = document.createElementNS("http://www.w3.org/2000/svg", t);
+  for (const k in a) n.setAttribute(k, a[k]); return n; };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const money = (v, d = 2) => v == null ? "--"
+  : (v < 0 ? "-" : "") + "$" + Math.abs(v).toLocaleString(undefined,
+      { minimumFractionDigits: d, maximumFractionDigits: d });
+const sgn = (v, d = 2) => v == null ? "--" : (v >= 0 ? "+" : "") + v.toFixed(d);
+const pct = (v, d = 1) => v == null ? "--" : v.toFixed(d) + "%";
+const cls = (v) => v > 0 ? "pos" : v < 0 ? "neg" : "";
+
+/* ---- the rail ------------------------------------------------------- */
+const m = D.metrics;
+const dayPnl = D.daily[D.daily.length - 1].v;
+const riskLeft = 40 - Math.max(0, -dayPnl);            // 2% of a $2,000 account
+$("#gauges").innerHTML = [
+  ["Equity", money(m.final_equity, 0), ""],
+  ["Today", money(dayPnl), cls(dayPnl)],
+  ["Risk left", money(riskLeft, 0), riskLeft < 20 ? "neg" : ""],
+  ["Open", "flat", "dim"],
+].map(([k, v, c]) => `<div class="gauge"><span class="gauge-k">${k}</span>
+   <span class="gauge-v ${c}">${v}</span></div>`).join("");
+
+/* ---- tabs ----------------------------------------------------------- */
+const TABS = [
+  ["dashboard", "Account", 0],
+  ["context", "Market context", D.context.findings.filter(f => f.severity === "act").length],
+  ["behavior", "Behavior", D.behavior.findings.filter(f => f.severity === "act").length],
+  ["analysis", "Analysis", 0],
+  ["data", "Data", 0],
+  ["size", "Size", 0],
+  ["settings", "Settings", 0],
+];
+$("#tabs").innerHTML = TABS.map(([id, label, n], i) =>
+  `<button class="tab" role="tab" data-v="${id}" aria-selected="${i === 0}"
+    >${label}${n ? `<span class="n">${n}</span>` : ""}</button>`).join("");
+function show(id) {
+  document.querySelectorAll(".tab").forEach((b) =>
+    b.setAttribute("aria-selected", String(b.dataset.v === id)));
+  document.querySelectorAll(".view").forEach((v) =>
+    v.classList.toggle("on", v.id === "v-" + id));
+  if (id === "dashboard" || id === "analysis") requestAnimationFrame(drawAll);
+}
+$("#tabs").addEventListener("click", (e) => {
+  const b = e.target.closest(".tab"); if (b) show(b.dataset.v);
+});
+
+/* ---- theme ---------------------------------------------------------- */
+$("#theme").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark"
+    : !matchMedia("(prefers-color-scheme: light)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  requestAnimationFrame(drawAll);
+});
+
+/* ---- dashboard ------------------------------------------------------ */
+$("#dash-period").textContent =
+  `${D.tradeCount} trades  ${D.period.first.slice(0,10)} to ${D.period.last.slice(0,10)}`;
+const fig = (k, v, n, c = "") =>
+  `<div class="fig"><div class="fig-k">${k}</div>
+   <div class="fig-v ${c}">${v}</div><div class="fig-n">${n}</div></div>`;
+$("#dash-figures").innerHTML = [
+  fig("Net P&amp;L", money(m.net_pnl), `after ${money(m.commission)} commission`, cls(m.net_pnl)),
+  fig("Expectancy", sgn(m.expectancy_r, 3) + "R", "per trade", cls(m.expectancy_r)),
+  fig("Win rate", pct(m.win_rate), `${m.wins}W / ${m.losses}L`),
+  fig("Profit factor", m.profit_factor.toFixed(2), "gross win / gross loss"),
+  fig("Max drawdown", money(m.max_drawdown), pct(m.max_drawdown_pct, 2), "neg"),
+  fig("Avg hold", Math.round(m.avg_duration_minutes) + " min", `${m.trading_days} days traded`),
+].join("");
+
+/* ---- charts --------------------------------------------------------- */
+function ticks(lo, hi, n = 4) {
+  if (lo === hi) return [lo];
+  const raw = (hi - lo) / n, mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((x) => x * mag).find((c) => c >= raw) || mag * 10;
+  const out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step)
+    out.push(+v.toFixed(10));
+  return out;
+}
+function frame(host, h) {
+  host.innerHTML = "";
+  const w = Math.max(host.clientWidth || 720, 300);
+  const svg = el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img" });
+  host.append(svg);
+  return { svg, w, h };
+}
+function line(host, pts, fmt) {
+  const { svg, w, h } = frame(host, 240);
+  const pad = { t: 10, r: 14, b: 22, l: 62 };
+  const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  const vs = pts.map((p) => p.v);
+  let lo = Math.min(...vs), hi = Math.max(...vs);
+  const pad2 = (hi - lo || 1) * .1; lo -= pad2; hi += pad2;
+  const X = (i) => pad.l + (i / (pts.length - 1)) * pw;
+  const Y = (v) => pad.t + ph - ((v - lo) / (hi - lo)) * ph;
+  ticks(lo, hi).forEach((t) => {
+    svg.append(el("line", { class: "grid", x1: pad.l, x2: w - pad.r, y1: Y(t), y2: Y(t) }));
+    const lab = el("text", { class: "tick", x: pad.l - 8, y: Y(t) + 3.5, "text-anchor": "end" });
+    lab.textContent = fmt(t); svg.append(lab);
+  });
+  const d = pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p.v).toFixed(1)}`).join("");
+  svg.append(el("path", { class: "area", d: `${d}L${X(pts.length - 1)} ${pad.t + ph}L${X(0)} ${pad.t + ph}Z` }));
+  svg.append(el("path", { class: "line", d }));
+  svg.append(el("circle", { class: "cap", cx: X(pts.length - 1), cy: Y(pts[pts.length - 1].v), r: 4 }));
+  [[0, "start", pad.l], [pts.length - 1, "end", w - pad.r]].forEach(([i, anch, x]) => {
+    const t = el("text", { class: "tick", x, y: h - 6, "text-anchor": anch });
+    t.textContent = pts[i].label || ""; svg.append(t);
+  });
+}
+function bars(host, rows, fmt, height = 210) {
+  const { svg, w, h } = frame(host, height);
+  const pad = { t: 12, r: 14, b: 30, l: 62 };
+  const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  const vs = rows.map((r) => r.v);
+  const hi = Math.max(0, ...vs), lo = Math.min(0, ...vs), span = (hi - lo) || 1;
+  const Y = (v) => pad.t + ph - ((v - lo) / span) * ph;
+  const zero = Y(0), slot = pw / rows.length;
+  const bw = Math.max(1, Math.min(44, slot - 2));
+  ticks(lo, hi).forEach((t) => {
+    svg.append(el("line", { class: t === 0 ? "axis" : "grid",
+      x1: pad.l, x2: w - pad.r, y1: Y(t), y2: Y(t) }));
+    const lab = el("text", { class: "tick", x: pad.l - 8, y: Y(t) + 3.5, "text-anchor": "end" });
+    lab.textContent = fmt(t); svg.append(lab);
+  });
+  const every = Math.ceil(rows.length / Math.max(1, Math.floor(pw / 56)));
+  rows.forEach((r, i) => {
+    const x = pad.l + i * slot + (slot - bw) / 2, y = Y(r.v);
+    const up = r.v >= 0, top = up ? y : zero, hgt = Math.abs(y - zero);
+    const rad = Math.min(3, bw / 2, hgt);
+    svg.append(el("path", {
+      fill: up ? "var(--pos)" : "var(--neg)",
+      d: hgt < .5 ? `M${x} ${zero}h${bw}`
+        : up ? `M${x} ${zero}V${top + rad}a${rad} ${rad} 0 0 1 ${rad} ${-rad}h${bw - 2 * rad}a${rad} ${rad} 0 0 1 ${rad} ${rad}V${zero}Z`
+             : `M${x} ${zero}V${zero + hgt - rad}a${rad} ${rad} 0 0 0 ${rad} ${rad}h${bw - 2 * rad}a${rad} ${rad} 0 0 0 ${rad} ${-rad}V${zero}Z`,
+    }));
+    if (i % every === 0) {
+      const lab = el("text", { class: "tick", x: x + bw / 2, y: h - 10, "text-anchor": "middle" });
+      lab.textContent = r.label; svg.append(lab);
+    }
+  });
+}
+function drawAll() {
+  line($("#c-equity"),
+    D.equity.map((p, i) => ({ v: p.v, label: i === 0 ? "start" : D.period.last.slice(0, 10) })),
+    (t) => money(t, 0));
+  bars($("#c-daily"), D.daily.map((d) => ({ label: d.d.slice(5), v: d.v })), (t) => money(t, 0));
+  const g = D[$("#group").value];
+  bars($("#c-group"), g.map((b) => ({ label: b.name, v: b.expectancy_r ?? 0 })), (t) => sgn(t, 2));
+}
+
+/* ---- findings ------------------------------------------------------- */
+const renderFindings = (host, list, unit) => host.innerHTML = list.map((f) => `
+  <article class="find ${f.severity}">
+    <div class="find-h"><h3>${esc(f.headline)}</h3>
+      <span class="sev ${f.severity}">${f.severity}</span></div>
+    <p class="find-d">${esc(f.detail)}</p>
+    <div class="find-s">${esc(f.suggestion)}</div>
+    <div class="find-m"><span>n=${f.sample}</span>
+      <span>effect ${sgn(f.effect, 2)}${esc(f.effect_unit || unit)}</span>
+      <span>p&asymp;${f.p_value == null ? "n/a" : f.p_value.toFixed(3)}</span>
+      <span>confidence ${esc(f.confidence)}</span></div>
+  </article>`).join("");
+
+$("#ctx-figures").innerHTML = Object.entries(D.context.headline)
+  .map(([k, v]) => fig(k, esc(v), "")).join("");
+renderFindings($("#ctx-findings"), D.context.findings, D.context.unit);
+renderFindings($("#beh-findings"), D.behavior.findings, D.behavior.unit);
+$("#beh-foot").textContent = `Hypotheses drawn from ${D.behavior.trades} trades over `
+  + `${D.behavior.days} days, not laws. Act on the ones you recognise.`;
+$("#guardrails").innerHTML = Object.entries(D.behavior.guardrails)
+  .map(([k, v]) => `<span class="chip">${esc(k)} <b>${esc(v)}</b></span>`).join("");
+
+/* ---- tables --------------------------------------------------------- */
+const table = (node, cols, rows) => node.innerHTML =
+  `<thead><tr>${cols.map((c) => `<th>${c[0]}</th>`).join("")}</tr></thead>
+   <tbody>${rows.map((r) => `<tr>${cols.map((c) => {
+     const [txt, k] = c[1](r); return `<td class="${k || ""}">${txt}</td>`;
+   }).join("")}</tr>`).join("")}</tbody>`;
+
+table($("#t-tagged"), [
+  ["Day", (r) => [r.session_day]],
+  ["Time", (r) => [r.entry_time.slice(11, 16)]],
+  ["Side", (r) => [r.direction]],
+  ["Trend", (r) => [`<span class="tag">${r.trend}</span>`,
+    r.with_trend === false ? "neg" : r.with_trend ? "pos" : ""]],
+  ["Location", (r) => [`<span class="tag">${r.location.replace("_", " ")}</span>`]],
+  ["Exit", (r) => [`<span class="tag">${r.exit_quality}</span>`]],
+  ["Stop/bar", (r) => [r.stop_vs_bar == null ? "--" : r.stop_vs_bar.toFixed(2) + "x",
+    r.stop_vs_bar != null && r.stop_vs_bar < 1 ? "neg" : ""]],
+  ["Captured", (r) => [r.capture_ratio == null ? "--" : Math.round(r.capture_ratio * 100) + "%"]],
+  ["Level", (r) => [r.level_rejections ? r.level_rejections + "x" : "--"]],
+], [...D.tagged].reverse());
+
+table($("#t-trades"), [
+  ["Day", (r) => [r.session_day]],
+  ["Time", (r) => [r.entry_time.slice(11, 16)]],
+  ["Side", (r) => [r.direction]],
+  ["Qty", (r) => [r.contracts]],
+  ["In", (r) => [r.entry_price.toLocaleString()]],
+  ["Out", (r) => [r.exit_price.toLocaleString()]],
+  ["Net", (r) => [money(r.net_pnl), cls(r.net_pnl)]],
+  ["R", (r) => [r.r_multiple == null ? "--" : sgn(r.r_multiple, 2), cls(r.r_multiple)]],
+  ["Setup", (r) => [esc(r.setup)]],
+], [...D.trades].reverse());
+
+function groupTable() {
+  const g = D[$("#group").value];
+  table($("#t-group"), [
+    [$("#group").selectedOptions[0].textContent, (r) => [esc(r.name)]],
+    ["Trades", (r) => [r.trades]],
+    ["Win%", (r) => [pct(r.win_rate)]],
+    ["Net", (r) => [money(r.net_pnl), cls(r.net_pnl)]],
+    ["Exp R", (r) => [sgn(r.expectancy_r, 3), cls(r.expectancy_r)]],
+    ["PF", (r) => [r.profit_factor == null ? "--" : r.profit_factor.toFixed(2)]],
+  ], g);
+}
+$("#group").addEventListener("change", () => { groupTable(); drawAll(); });
+groupTable();
+
+table($("#t-statements"), [
+  ["File", (r) => [esc(r.filename)]],
+  ["Kind", (r) => [`<span class="tag">${r.kind}</span>`]],
+  ["Rows", (r) => [r.rows_imported.toLocaleString()]],
+  ["Covering", (r) => [r.period.first ? r.period.first.slice(0, 10) + " to " + r.period.last.slice(0, 10) : "--"]],
+  ["Status", (r) => [`<span class="tag">${r.status}</span>`]],
+], D.statements);
+
+table($("#t-bars"), [
+  ["Symbol", (r) => [esc(r.symbol)]],
+  ["Bars", (r) => [r.bars.toLocaleString()]],
+  ["Timeframe", (r) => [r.timeframes.map((t) => t + "m").join(", ")]],
+  ["Days", (r) => [r.days]],
+  ["Covering", (r) => [r.first.slice(0, 10) + " to " + r.last.slice(0, 10)]],
+], D.bars.symbols);
+
+/* ---- sizer (this one really computes) -------------------------------- */
+const SPEC = { MYM: { pv: 0.5, tick: 1, comm: 0.5 }, YM: { pv: 5, tick: 1, comm: 2 } };
+function sizeIt() {
+  const s = SPEC[$("#s-sym").value];
+  const budget = +$("#s-risk").value;
+  const pts = Math.abs(+$("#s-entry").value - +$("#s-stop").value);
+  const per = pts * s.pv;
+  const n = per > 0 ? Math.floor(budget / per) : 0;
+  const out = $("#s-out");
+  if (!pts) {
+    out.innerHTML = `<div class="verdict no"><b>Entry and stop are the same price.</b></div>`;
+    return;
+  }
+  if (n < 1) {
+    out.innerHTML = `<div class="verdict no">
+      <b>Not a trade this account can take.</b>
+      <p class="dim sm" style="margin-top:7px">One contract costs
+      <span class="mono">${money(per)}</span> at a <span class="mono">${pts}</span> point stop,
+      and the budget is <span class="mono">${money(budget)}</span>. Tighten the stop, use MYM,
+      or let this one go.</p></div>`;
+    return;
+  }
+  out.innerHTML = `<div class="verdict">
+    <b class="mono">${n} contract${n === 1 ? "" : "s"}</b>, risking
+    <span class="mono">${money(n * per)}</span>
+    <table style="margin-top:11px"><tbody>
+      <tr><td>Stop distance</td><td>${pts} pts / ${(pts / s.tick).toFixed(0)} ticks</td></tr>
+      <tr><td>Per contract</td><td>${money(per)}</td></tr>
+      <tr><td>Commission, round turn</td><td>${money(s.comm * 2 * n)}</td></tr>
+      <tr><td>2R target</td><td>${(+$("#s-entry").value + 2 * pts).toLocaleString()}</td></tr>
+    </tbody></table></div>`;
+}
+$("#sizer").addEventListener("submit", (e) => { e.preventDefault(); sizeIt(); });
+$("#sizer").addEventListener("input", sizeIt);
+$("#sizer").addEventListener("change", sizeIt);
+sizeIt();
+
+addEventListener("resize", () => { clearTimeout(window._t);
+  window._t = setTimeout(drawAll, 150); });
+drawAll();
+</script>
+
+</body>
+</html>
