@@ -27,6 +27,39 @@ from .core import Bar
 _LEVEL_IDS = itertools.count(1)
 
 
+def find_swings(
+    bars: Sequence[Bar], strength: int = 3
+) -> tuple[list[tuple[int, float]], list[tuple[int, float]]]:
+    """Confirmed swing highs and lows in a finished series of bars.
+
+    Returns ``(highs, lows)`` as ``(index, price)`` pairs. This is the same rule
+    :class:`LevelTracker` applies bar by bar, in a form that suits code looking
+    back over a series it already has -- trend reading, mostly. Keep the two in
+    step: a swing here and a pivot there must mean the same thing.
+    """
+    highs: list[tuple[int, float]] = []
+    lows: list[tuple[int, float]] = []
+    if strength < 1 or len(bars) < 2 * strength + 1:
+        return highs, lows
+
+    for index in range(strength, len(bars) - strength):
+        window = bars[index - strength : index + strength + 1]
+        bar = bars[index]
+        if (
+            bar.low == min(item.low for item in window)
+            and bar.low < bars[index - 1].low
+            and bar.low < bars[index + 1].low
+        ):
+            lows.append((index, bar.low))
+        if (
+            bar.high == max(item.high for item in window)
+            and bar.high > bars[index - 1].high
+            and bar.high > bars[index + 1].high
+        ):
+            highs.append((index, bar.high))
+    return highs, lows
+
+
 @dataclass
 class Touch:
     """One confirmed rejection of a level."""
