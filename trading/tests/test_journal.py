@@ -6,8 +6,8 @@ import unittest
 from datetime import datetime, timedelta
 
 from ym.core import Direction, ExitReason, Trade
-from ym.journal import Journal
-from ym.sessions import exchange_tz
+from ym.journal import Journal, parse_position_history
+from ym.sessions import DEFAULT_SESSION, exchange_tz
 
 ET = exchange_tz()
 
@@ -224,6 +224,154 @@ class TestNinjaTraderImport(JournalCase):
             places=2,
         )
         self.assertTrue(all(t.r_multiple is not None for t in restored))
+
+
+POSITION_HEADER = (
+    "Position ID,Timestamp,Trade Date,Net Pos,Net Price,Bought,Avg. Buy,Sold,"
+    "Avg. Sell,Account,Contract,Product,Product Description,Pair ID,Buy Fill ID,"
+    "Sell Fill ID,Paired Qty,Buy Price,Sell Price,P/L,Currency,Bought Timestamp,"
+    "Sold Timestamp\n"
+)
+
+
+def position_row(pair, buy_id, sell_id, buy, sell, pnl, bought, sold, qty=1):
+    return (
+        f"9,09/10/2026 13:01:02,2026-09-10,0,,1,,1,,1,MYMU6,MYM,Micro,{pair},"
+        f"{buy_id},{sell_id},{qty},{buy},{sell},{pnl},USD,{bought},{sold}\n"
+    )
+
+
+# Wall-clock times are US/Pacific, as the web platform exports them.
+POSITION_HISTORY = POSITION_HEADER + "".join([
+    # Long, entered 16:33 PT = 19:33 ET: after the 18:00 roll, so Thursday's session.
+    position_row(1, 100, 110, 52483, 52518, "17.50",
+                 "09/09/2026 16:33:20", "09/09/2026 17:16:58"),
+    # Short: the sell filled first.
+    position_row(2, 130, 120, 52573, 52532, "(20.50)",
+                 "09/10/2026 06:10:00", "09/10/2026 06:00:00"),
+    # One 2-lot buy (fill 140) closed by two 1-lot sells.
+    position_row(3, 140, 150, 52500, 52510, "5.00",
+                 "09/10/2026 07:00:00", "09/10/2026 07:05:00"),
+    position_row(4, 140, 160, 52500, 52520, "10.00",
+                 "09/10/2026 07:00:00", "09/10/2026 07:06:00"),
+    # Both legs in the same second: the lower fill ID came first.
+    position_row(5, 170, 180, 52600, 52602, "1.00",
+                 "09/10/2026 08:00:00", "09/10/2026 08:00:00"),
+])
+
+
+def fee_rows(fill_id, stamp, contracts=1, contract="MYMU6"):
+    """$0.84 per contract per fill, split over two rows as the broker does."""
+    return (
+        f"1,{fill_id + 1},{stamp},2026-09-10,{-0.50 * contracts:.2f},0, Commission,USD,{contract}\n"
+        f"1,{fill_id + 2},{stamp},2026-09-10,{-0.34 * contracts:.2f},0, Exchange Fee,USD,{contract}\n"
+    )
+
+
+CASH_HEADER = "Account,Transaction ID,Timestamp,Date,Delta,Amount,Cash Change Type,Currency,Contract\n"
+CASH_HISTORY = CASH_HEADER + "".join([
+    "1,1,09/09/2026 07:25:33,2026-09-09,100.00,100.00, Fund Transaction,USD,\n",
+    fee_rows(100, "09/09/2026 16:33:20"),
+    fee_rows(110, "09/09/2026 17:16:59"),        # stamped a second after the fill
+    fee_rows(120, "09/10/2026 06:00:00"),
+    fee_rows(130, "09/10/2026 06:10:00"),
+    fee_rows(140, "09/10/2026 07:00:00", contracts=2),
+    fee_rows(150, "09/10/2026 07:05:00"),
+    fee_rows(160, "09/10/2026 07:06:00"),
+    fee_rows(170, "09/10/2026 08:00:00"),
+    fee_rows(180, "09/10/2026 08:00:00"),
+    "1,900,09/10/2026 08:00:00,2026-09-10,13.00,0, Trade Paired,USD,MYMU6\n",
+])
+
+
+class TestPositionHistoryImport(JournalCase):
+    def parse(self, positions=POSITION_HISTORY, cash=CASH_HISTORY, **kwargs):
+        cash_path = self.write_csv(cash) if cash is not None else None
+        return parse_position_history(
+            self.write_csv(positions), tz="America/Los_Angeles",
+            cash_history=cash_path, **kwargs,
+        )
+
+    def test_reads_every_pair_cleanly(self):
+        trades, warnings = self.parse()
+        self.assertEqual(len(trades), 5)
+        self.assertEqual(warnings, [])
+        self.assertAlmostEqual(sum(t.gross_pnl for t in trades), 13.00)
+
+    def test_direction_comes_from_which_leg_filled_first(self):
+        trades, _ = self.parse()
+        self.assertEqual(
+            [t.direction for t in trades],
+            [Direction.LONG, Direction.SHORT, Direction.LONG, Direction.LONG,
+             Direction.LONG],
+        )
+        short = trades[1]
+        self.assertEqual((short.entry_price, short.exit_price), (52532, 52573))
+        self.assertAlmostEqual(short.gross_pnl, -20.50)
+
+    def test_pacific_times_become_eastern_and_roll_the_session(self):
+        trades, _ = self.parse()
+        first = trades[0]
+        self.assertEqual(first.entry_time, datetime(2026, 9, 9, 19, 33, 20, tzinfo=ET))
+        self.assertEqual(first.entry_time.utcoffset(), timedelta(hours=-4))
+        self.assertEqual(DEFAULT_SESSION.session_day(first.entry_time).isoformat(),
+                         "2026-09-10")
+
+    def test_actual_fees_attach_including_a_shared_fill(self):
+        trades, _ = self.parse()
+        for trade in trades:
+            self.assertAlmostEqual(trade.commission, 1.68)
+        self.assertAlmostEqual(sum(t.commission for t in trades), 0.84 * 10)
+
+    def test_fees_without_a_matching_fill_are_reported_not_charged(self):
+        late = CASH_HISTORY.replace("09/10/2026 06:10:00", "09/10/2026 06:10:05")
+        trades, warnings = self.parse(cash=late)
+        self.assertAlmostEqual(trades[1].commission, 0.84)
+        self.assertTrue(any("2 fee row(s) totalling -0.84" in w for w in warnings))
+
+    def test_unknown_cash_types_are_reported(self):
+        extra = CASH_HISTORY + "1,950,09/10/2026 09:00:00,2026-09-10,-5.00,0, Market Data Fee,USD,\n"
+        _, warnings = self.parse(cash=extra)
+        self.assertTrue(any("'Market Data Fee' totalling -5.00" in w for w in warnings))
+
+    def test_realized_mismatch_flags_files_covering_different_dates(self):
+        _, warnings = self.parse(cash=CASH_HISTORY.replace(",13.00,", ",20.00,"))
+        self.assertTrue(any("cover different dates" in w for w in warnings))
+
+    def test_without_cash_history_pnl_is_gross_and_says_so(self):
+        trades, warnings = self.parse(cash=None)
+        self.assertTrue(all(t.commission == 0 for t in trades))
+        self.assertTrue(any("P&L is gross" in w for w in warnings))
+
+    def test_default_stop_gives_r_multiples(self):
+        trades, _ = self.parse(default_stop_points=20)
+        self.assertEqual(trades[0].stop_price, 52463)
+        self.assertEqual(trades[1].stop_price, 52552)
+        self.assertIsNotNone(trades[0].r_multiple)
+
+    def test_bad_row_is_a_warning_not_a_lost_file(self):
+        broken = POSITION_HISTORY + position_row(
+            6, 190, 200, "n/a", 52600, "0", "09/10/2026 09:00:00", "09/10/2026 09:01:00")
+        trades, warnings = self.parse(positions=broken, cash=None)
+        self.assertEqual(len(trades), 5)
+        self.assertTrue(any("line 7: unreadable price" in w for w in warnings))
+
+    def test_pnl_that_disagrees_with_prices_is_flagged(self):
+        wrong = POSITION_HISTORY.replace(",17.50,", ",175.00,")
+        _, warnings = self.parse(positions=wrong)
+        self.assertTrue(any("file P/L 175.00 != computed 17.50" in w for w in warnings))
+
+    def test_ambiguous_dst_time_is_flagged(self):
+        fallback = POSITION_HEADER + position_row(
+            1, 100, 110, 52483, 52518, "17.50",
+            "11/01/2026 01:30:00", "11/01/2026 02:30:00")
+        _, warnings = self.parse(positions=fallback, cash=None)
+        self.assertTrue(any("DST fall-back" in w for w in warnings))
+
+    def test_missing_columns_name_what_was_found(self):
+        with self.assertRaises(ValueError) as caught:
+            self.parse(positions="Account,Contract\n1,MYMU6\n", cash=None)
+        self.assertIn("pair id", str(caught.exception))
 
 
 class TestExport(JournalCase):

@@ -16,9 +16,10 @@ Two fields do the heavy lifting and are easy to skip -- don't:
 
 from __future__ import annotations
 
+import bisect
 import csv
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -538,4 +539,255 @@ def parse_trade_csv(
                 )
             )
 
+    return trades, warnings
+
+
+# -- NinjaTrader web / mobile account exports ---------------------------------
+
+#: Cash History rows that are per-fill trading costs. Anything else that is
+#: not realized P&L or a deposit is reported, never silently charged.
+FEE_CASH_TYPES = frozenset({"commission", "exchange fee", "clearing fee", "nfa fee"})
+_NON_FEE_CASH_TYPES = frozenset({"trade paired", "fund transaction"})
+
+#: How long after a fill its fee rows may be stamped. Observed: 0-1 seconds.
+FEE_LAG = timedelta(seconds=2)
+
+
+def _read_export(path: Path) -> tuple[list[dict], dict[str, str]]:
+    """Rows plus a header lookup normalized like :func:`parse_trade_csv`."""
+    with open(path, "r", encoding="utf-8-sig", newline="") as handle:
+        sample = handle.read(4096)
+        handle.seek(0)
+        delimiter = ";" if sample.count(";") > sample.count(",") else ","
+        reader = csv.DictReader(handle, delimiter=delimiter)
+        if not reader.fieldnames:
+            raise ValueError(f"{path.name}: no header row found")
+        lookup = {
+            (name or "").strip().lower().rstrip("."): name
+            for name in reader.fieldnames
+        }
+        return list(reader), lookup
+
+
+def _require(path: Path, lookup: dict[str, str], labels: tuple[str, ...]) -> dict[str, str]:
+    missing = [label for label in labels if label not in lookup]
+    if missing:
+        raise ValueError(
+            f"{path.name}: missing required column(s) {missing}. "
+            f"Found: {list(lookup.values())}"
+        )
+    return {label: lookup[label] for label in labels}
+
+
+def _money(raw: str | None) -> float | None:
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    cleaned = raw.replace("$", "").replace(",", "").replace("(", "-").replace(")", "")
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def _local_time(raw: str | None, zone) -> datetime | None:
+    value = (raw or "").strip()
+    for fmt in ("%m/%d/%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(value, fmt).replace(tzinfo=zone)
+        except ValueError:
+            continue
+    return None
+
+
+def _is_ambiguous(local: datetime) -> bool:
+    """True inside a DST fall-back hour, where a wall-clock time happens twice."""
+    return local.utcoffset() != local.replace(fold=1).utcoffset()
+
+
+def parse_position_history(
+    path: str | Path,
+    *,
+    tz: str,
+    cash_history: str | Path | None = None,
+    default_stop_points: float | None = None,
+    session: SessionSpec = DEFAULT_SESSION,
+) -> tuple[list[Trade], list[str]]:
+    """Read round trips out of NinjaTrader's web/mobile *Position History* export.
+
+    That platform (the Tradovate back end) does not export NT8's Trade
+    Performance grid. Its Position History has one row per broker-paired
+    buy/sell fill -- ``Pair ID``, ``Buy Fill ID``, ``Sell Fill ID``,
+    ``Paired Qty``, ``Buy Price``, ``Sell Price``, ``Bought Timestamp``,
+    ``Sold Timestamp``, ``P/L`` -- and no direction column. Direction comes
+    from which leg filled first (fill ID breaks a same-second tie).
+
+    ``tz`` is the zone the export's wall-clock timestamps are written in -- the
+    account's display zone, not the exchange's -- and is required because
+    getting it wrong silently moves trades across the 18:00 ET session roll.
+    Times are converted to the session's zone (ET).
+
+    ``P/L`` in the file is gross. Pass the *Cash History* export as
+    ``cash_history`` to attach actual fees: each fee row is tied to the fill
+    whose ID immediately precedes its Transaction ID, and accepted only if the
+    contract matches and it is stamped within :data:`FEE_LAG` of that fill. A
+    fill's fees are shared across the pairs that use it by paired quantity.
+    Fee rows that cannot be tied to a fill are reported, not dropped quietly.
+
+    Like :func:`parse_trade_csv`, bad rows become warnings, and no stop is
+    exported, so R-multiples need ``default_stop_points``. No MAE/MFE either.
+    """
+    path = Path(path)
+    zone = exchange_tz(tz)
+    warnings: list[str] = []
+
+    rows, lookup = _read_export(path)
+    cols = _require(path, lookup, (
+        "pair id", "buy fill id", "sell fill id", "paired qty", "buy price",
+        "sell price", "bought timestamp", "sold timestamp", "contract",
+    ))
+    pl_col = lookup.get("p/l")
+
+    # (pair id, fill ids, qty, legs) for every readable row.
+    pairs: list[dict] = []
+    seen: set[str] = set()
+    for line_number, row in enumerate(rows, start=2):
+        pair_id = (row.get(cols["pair id"]) or "").strip()
+        if pair_id in seen:
+            warnings.append(f"line {line_number}: duplicate pair {pair_id}, skipped")
+            continue
+        buy_time = _local_time(row.get(cols["bought timestamp"]), zone)
+        sell_time = _local_time(row.get(cols["sold timestamp"]), zone)
+        buy_price = _money(row.get(cols["buy price"]))
+        sell_price = _money(row.get(cols["sell price"]))
+        qty = _money(row.get(cols["paired qty"]))
+        buy_id = (row.get(cols["buy fill id"]) or "").strip()
+        sell_id = (row.get(cols["sell fill id"]) or "").strip()
+        if buy_time is None or sell_time is None:
+            warnings.append(f"line {line_number}: unreadable timestamp")
+            continue
+        if buy_price is None or sell_price is None:
+            warnings.append(f"line {line_number}: unreadable price")
+            continue
+        if not qty or qty <= 0 or qty != int(qty):
+            warnings.append(f"line {line_number}: unreadable paired qty")
+            continue
+        if not buy_id.isdigit() or not sell_id.isdigit():
+            warnings.append(f"line {line_number}: unreadable fill id")
+            continue
+        raw_symbol = (row.get(cols["contract"]) or "").strip()
+        try:
+            instrument = get_instrument(raw_symbol)
+        except KeyError:
+            warnings.append(f"line {line_number}: unknown instrument {raw_symbol!r}")
+            continue
+
+        buy_first = (buy_time, int(buy_id)) < (sell_time, int(sell_id))
+        direction = Direction.LONG if buy_first else Direction.SHORT
+        entry = (buy_time, buy_price) if buy_first else (sell_time, sell_price)
+        exit_ = (sell_time, sell_price) if buy_first else (buy_time, buy_price)
+        for stamp in (buy_time, sell_time):
+            if _is_ambiguous(stamp):
+                warnings.append(
+                    f"line {line_number}: {stamp:%m/%d/%Y %H:%M:%S} falls in a DST "
+                    "fall-back hour; read as the first occurrence"
+                )
+
+        contracts = int(qty)
+        trade = Trade(
+            symbol=instrument.symbol,
+            direction=direction,
+            entry_time=entry[0].astimezone(session.tz),
+            entry_price=entry[1],
+            contracts=contracts,
+            point_value=instrument.point_value,
+            exit_time=exit_[0].astimezone(session.tz),
+            exit_price=exit_[1],
+        )
+        if default_stop_points:
+            trade.stop_price = entry[1] - direction.sign * abs(default_stop_points)
+
+        reported = _money(row.get(pl_col)) if pl_col else None
+        if reported is not None and abs(reported - trade.gross_pnl) > 0.005:
+            warnings.append(
+                f"line {line_number}: file P/L {reported:.2f} != computed "
+                f"{trade.gross_pnl:.2f}; check contract and prices"
+            )
+
+        seen.add(pair_id)
+        pairs.append({
+            "trade": trade, "qty": contracts, "contract": raw_symbol,
+            "legs": ((buy_id, buy_time), (sell_id, sell_time)),
+        })
+
+    trades = [pair["trade"] for pair in pairs]
+    if cash_history is None:
+        if trades:
+            warnings.append("no Cash History given: fees not attached, P&L is gross")
+        return trades, warnings
+
+    # Every fill the pairs reference: contract, time, and paired quantity.
+    fills: dict[int, dict] = {}
+    for pair in pairs:
+        for fill_id, stamp in pair["legs"]:
+            fill = fills.setdefault(int(fill_id), {
+                "contract": pair["contract"], "time": stamp, "qty": 0, "fee": 0.0,
+            })
+            fill["qty"] += pair["qty"]
+    fill_ids = sorted(fills)
+
+    cash_path = Path(cash_history)
+    cash_rows, cash_lookup = _read_export(cash_path)
+    cash = _require(cash_path, cash_lookup, (
+        "transaction id", "timestamp", "contract", "cash change type", "delta",
+    ))
+    unallocated = 0.0
+    unallocated_rows = 0
+    other: dict[str, float] = {}
+    realized = 0.0
+    for line_number, row in enumerate(cash_rows, start=2):
+        kind = (row.get(cash["cash change type"]) or "").strip()
+        delta = _money(row.get(cash["delta"]))
+        if delta is None:
+            warnings.append(f"cash line {line_number}: unreadable delta")
+            continue
+        if kind.lower() == "trade paired":
+            realized += delta
+        if kind.lower() not in FEE_CASH_TYPES:
+            if kind.lower() not in _NON_FEE_CASH_TYPES:
+                other[kind] = other.get(kind, 0.0) + delta
+            continue
+        txn = (row.get(cash["transaction id"]) or "").strip()
+        stamp = _local_time(row.get(cash["timestamp"]), zone)
+        contract = (row.get(cash["contract"]) or "").strip()
+        index = bisect.bisect_left(fill_ids, int(txn)) - 1 if txn.isdigit() else -1
+        fill = fills[fill_ids[index]] if index >= 0 else None
+        if (
+            fill is None or stamp is None or fill["contract"] != contract
+            or not timedelta(0) <= stamp - fill["time"] <= FEE_LAG
+        ):
+            unallocated += delta
+            unallocated_rows += 1
+            continue
+        fill["fee"] += -delta  # fees are negative cash deltas
+
+    for pair in pairs:
+        pair["trade"].commission = sum(
+            fills[int(fill_id)]["fee"] * pair["qty"] / fills[int(fill_id)]["qty"]
+            for fill_id, _ in pair["legs"]
+        )
+
+    if unallocated_rows:
+        warnings.append(
+            f"{unallocated_rows} fee row(s) totalling {unallocated:.2f} matched no "
+            "paired fill (open position, or files cover different dates); not charged"
+        )
+    for kind, total in sorted(other.items()):
+        warnings.append(f"cash type {kind!r} totalling {total:.2f} ignored")
+    gross = sum(trade.gross_pnl for trade in trades)
+    if abs(realized - gross) > 0.005:
+        warnings.append(
+            f"Cash History realized P&L {realized:.2f} != Position History gross "
+            f"{gross:.2f}; the two files likely cover different dates"
+        )
     return trades, warnings
